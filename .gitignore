@@ -1,0 +1,6 @@
+.idea
+.idead/**
+.idead/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+__pycache__/**
