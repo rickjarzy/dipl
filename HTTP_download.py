@@ -1,14 +1,40 @@
-
-from bs4 import BeautifulSoup
 import os
 import requests
-from base64 import b64encode
-from datetime import date
-import shutil
 import urllib
 import urllib3
 import certifi
-from downModis import downModis
+
+
+from bs4 import BeautifulSoup
+from base64 import b64encode
+from datetime import date
+from urllib import request
+from http.cookiejar import CookieJar
+
+
+class SessionWithHeaderRedirection(requests.Session):
+    AUTH_HOST = 'urs.earthdata.nasa.gov'
+
+    def __init__(self, username, password):
+        super(SessionWithHeaderRedirection, self).__init__()
+
+        self.auth = (username, password)
+
+    # Overrides from the library to keep headers when redirected to or from
+    # the NASA auth host.
+
+    def rebuild_auth(self, prepared_request, response):
+        headers = prepared_request.headers
+
+        url = prepared_request.url
+
+        if 'Authorization' in headers:
+            original_parsed = requests.utils.urlparse(response.request.url)
+            redirect_parsed = requests.utils.urlparse(url)
+
+        if (original_parsed.hostname != redirect_parsed.hostname) and (redirect_parsed.hostname != self.AUTH_HOST) and (original_parsed.hostname != self.AUTH_HOST):
+            del headers["Authorization"]
+
 
 
 
@@ -17,25 +43,27 @@ if __name__ == "__main__":
     kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
     mcd43a2 = "MCD43A2"
     mcd43a4 = "MCD43A4"
+
+    topics = [mcd43a2, mcd43a4]
     username = "pauljarzy"
     password = "summerINT2013#!"
+
+    session = SessionWithHeaderRedirection(username, password)
+
     doys = [i for i in range(1,362,8)]
     years = [i for i in range(2000,2021,1)]
 
     print("start download")
     version = ".006"
     root_server = r"https://e4ftl01.cr.usgs.gov/MOTA/"
+    goal_drive = r"R:\modis\v6\hdf"
 
-    goal_drive = r"M:\modis\v6\hdf"
-
-    userpwd = "{us}:{pw}".format(us=username,
-                                      pw=password)
+    userpwd = "{us}:{pw}".format(us=username, pw=password)
     userAndPass = b64encode(str.encode(userpwd)).decode("ascii")
     print("USER PASSWORD: ", userAndPass)
     http_header = {'Authorization': 'Basic %s' % userAndPass}
 
-    print("ca : ", certifi.where())
-    urllib3_poolmanager = urllib3.PoolManager(ca_certs=certifi.where())
+
 
     for year in years:
 
@@ -60,17 +88,13 @@ if __name__ == "__main__":
             else:
                 day = "{}".format(calc_date.day)
 
-            url_a2 = root_server + mcd43a2 + version + "/{}.{}.{}/".format(calc_date.year, month, day)
-            url_a4 = root_server + mcd43a4 + version + "/{}.{}.{}/".format(calc_date.year, month, day)
-            urls = [url_a2, url_a4]
+            for kachel in kacheln:
 
-            print(url_a2)
-            print(url_a4)
+                for topic in topics:
 
-            for kachel in ["h18v03"]:
-
-                for url in urls:
-
+                    # create urls to download
+                    url = root_server + topic + version + "/{}.{}.{}/".format(calc_date.year, month, day)
+                    print("# Processing url: ", url)
                     ret_html = requests.get(url)
 
                     data = ret_html.content
@@ -80,34 +104,25 @@ if __name__ == "__main__":
                     matches = [i for i in a_list if kachel in str(i)]
                     cou = 0
                     for match in matches:
-                        if cou == 2:
-                            cou = 0
-                            break
-                        print(match.text)
 
-                        with urllib3_poolmanager.request("GET", url, headers=http_header, preload_content=False) as response, open(goal_drive + "\\" + url.split("/")[4].split(".")[0] + "\\" + kachel + "\\" + str(match.text), "wb") as out_file:
-                            print("response status: ", response.status)
-                            shutil.copyfileobj(response, out_file)
-                            response.release_conn()
+                        if ".jpg" in match.text:
+                            print("  skipping jpg")
+                            continue
+                        print("  Processing tile: ", kachel)
+                        print("  processing file: ", match.text)
+
+                        response = session.get(url+match.text, stream=True)
+                        print("  response status code: ",response.status_code)
+
+                        outdir = os.path.join(goal_drive, topic, kachel, match.text)
+                        print("  outdir: ", outdir)
 
 
-                        # response = requests.get(url + match.text)
-                        # print("status code: ", response.status_code)
-                        #
-                        # with open(goal_drive + "\\" + mcd43a2 + "\\" + kachel + "\\" + match.text, "wb") as download:
-                        #     shutil.copyfileobj(response.content, download)
-
-                        # fileSave =  open(goal_drive + "\\" + url.split("/")[4].split(".")[0] + "\\" + kachel + "\\" + str(match.text), "wb")
-                        #
-                        # orig_size = None
-                        # try:  # download and write the file
-                        #     req = urllib.request.Request(url, headers=http_header)
-                        #     http = urllib.request.urlopen(req)
-                        #     orig_size = http.headers['Content-Length']
-                        #     fileSave.write(http.read())
-                        #     fileSave.close()
-                        # except:
-                        #     print("geht a net")
+                        response.raise_for_status()
+                        print("  start downloading ...")
+                        with open(outdir, "wb") as download_file:
+                            for chunk in response.iter_content(chunk_size=4096*4096):
+                                download_file.write(chunk)
 
                         cou += 1
 
