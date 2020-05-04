@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
                     # create urls to download
                     url = root_server + topic + version + "/{}.{}.{}/".format(calc_date.year, month, day)
-                    print("# Processing url: ", url)
+                    print("# Processing : %d of %d" % (doy, year), "  \n  url:",url)
                     ret_html = requests.get(url)
 
                     data = ret_html.content
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                     soup = BeautifulSoup(data, "html.parser")
                     a_list = soup.find_all('a')
                     matches = [i for i in a_list if kachel in str(i)]
-                    cou = 0
+
                     for match in matches:
 
                         if ".jpg" in match.text:
@@ -119,12 +119,20 @@ if __name__ == "__main__":
 
 
                         response.raise_for_status()
-                        print("  start downloading ...")
-                        with open(outdir, "wb") as download_file:
-                            for chunk in response.iter_content(chunk_size=4096*4096):
-                                download_file.write(chunk)
 
-                        cou += 1
+
+                        if os.path.exists(outdir) and os.stat(outdir).st_size > 9000:
+                            print("  file exists")
+                            continue
+                        else:
+                            print("  start downloading ...")
+                            cou = 0
+                            with open(outdir, "wb") as download_file:
+                                for chunk in response.iter_content(chunk_size=4096*4096):
+                                    print("download chunk ", cou)
+                                    download_file.write(chunk)
+
+                                    cou += 1
 
 
 
