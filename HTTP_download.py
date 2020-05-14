@@ -1,8 +1,6 @@
 import os
 import requests
-import urllib
-import urllib3
-import certifi
+import user_cred
 
 
 from bs4 import BeautifulSoup
@@ -45,18 +43,20 @@ if __name__ == "__main__":
     mcd43a4 = "MCD43A4"
 
     topics = [mcd43a2, mcd43a4]
-    username = "pauljarzy"
-    password = "summerINT2013#!"
+    username = user_cred.username
+    password = user_cred.password
 
     session = SessionWithHeaderRedirection(username, password)
 
     doys = [i for i in range(1,362,8)]
-    years = [i for i in range(2000,2021,1)]
+    years = [i for i in range(2011,2021,1)]
 
     print("start download")
     version = ".006"
     root_server = r"https://e4ftl01.cr.usgs.gov/MOTA/"
-    goal_drive = r"R:\modis\v6\hdf"
+    goal_drive = r"E:\modis\v6\hdf"
+    #firmen goal
+    #goal_drive = r"D:\private\Entwicklung\Python\Diplomarbeit\hdf"
 
     userpwd = "{us}:{pw}".format(us=username, pw=password)
     userAndPass = b64encode(str.encode(userpwd)).decode("ascii")
