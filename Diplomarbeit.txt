@@ -1,0 +1,24 @@
+##########################
+DATA DESCRIBTION: 
+##########################
+
+MODIS Data: MOderate-resolution Imaging Spectroradiometer (MODIS) BRDF / Albedo Quality product (MCD43A2) contains and discribes the overall condition of the other BRDF and Albedo products. 
+
+MCD steht für eine Kombination aus TERRA und AQUA Daten welche für die Herstellung dieses Produktes herangezogen wurden, um die größt mögliche Güte der Qualitätsinformation zu gewährleisten.
+Der herangezogene Zeitraum hierfür beträgt 16 Tage und das Datum des Files repräsentiert dabei das Zentrum des Moving-16-Tages-Windows [1]. Die täglichen Produkte werden hinsichtlich ihrer Qualität, Beobachtungsabdeckung,
+und zeitlichen Distanz zum interessierenden Zeitpunkt gewichtet [4].
+
+MCD43A2 Quality Product
+==========================
+
+Used Links: 
+[1]https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/MCD43A2/
+[2]https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD43A2#bands
+[3]https://lpdaac.usgs.gov/products/mcd43a2v006/
+[4]https://www.umb.edu/spectralmass/terra_aqua_modis/modis_brdf_albedo_product_mcd43
+
+Das MCD43A2 in der Version 6 beinhaltet die 
+Die Beobachtungen sind auf den neunten Tag der 16 Tages Periode gewichtet[3]. Dies führt auch zu einer besseren Qualiät in höheren Breiten. Im Vergleich hierzu Version 5 verwendet ein 
+Fenster von nur vier Beobachtungen pro Tag. [3]
+
+
