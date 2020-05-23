@@ -1,24 +1,54 @@
 ##########################
 DATA DESCRIBTION: 
 ##########################
-
-MODIS Data: MOderate-resolution Imaging Spectroradiometer (MODIS) BRDF / Albedo Quality product (MCD43A2) contains and discribes the overall condition of the other BRDF and Albedo products. 
-
-MCD steht für eine Kombination aus TERRA und AQUA Daten welche für die Herstellung dieses Produktes herangezogen wurden, um die größt mögliche Güte der Qualitätsinformation zu gewährleisten.
-Der herangezogene Zeitraum hierfür beträgt 16 Tage und das Datum des Files repräsentiert dabei das Zentrum des Moving-16-Tages-Windows [1]. Die täglichen Produkte werden hinsichtlich ihrer Qualität, Beobachtungsabdeckung,
-und zeitlichen Distanz zum interessierenden Zeitpunkt gewichtet [4].
-
-MCD43A2 Quality Product
-==========================
-
 Used Links: 
 [1]https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/MCD43A2/
 [2]https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD43A2#bands
 [3]https://lpdaac.usgs.gov/products/mcd43a2v006/
 [4]https://www.umb.edu/spectralmass/terra_aqua_modis/modis_brdf_albedo_product_mcd43
+[5]https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/MOD09GA/
+[6]https://landweb.modaps.eosdis.nasa.gov/cgi-bin/QA_WWW/newPage.cgi?fileName=maturity
+[7]https://ladsweb.modaps.eosdis.nasa.gov/filespec/MODIS/6/MCD43A2
+[8]https://lpdaac.usgs.gov/products/mcd43a4v006/
+[9]https://www.umb.edu/spectralmass/terra_aqua_modis/v006/mcd34a4_nbar_product
 
-Das MCD43A2 in der Version 6 beinhaltet die 
+MODIS Data General Describtion: 
+===============================
+
+MOderate-resolution Imaging Spectroradiometer (MODIS) BRDF / Albedo Quality product (MCD43A2) contains and discribes the overall condition of the other BRDF and Albedo products. 
+
+MCD steht für eine Kombination aus TERRA und AQUA Daten welche für die Herstellung dieses Produktes herangezogen wurden, um die größt mögliche Güte der Qualitätsinformation zu gewährleisten.
+Der herangezogene Zeitraum hierfür beträgt 16 Tage und das Datum des Files repräsentiert dabei das Zentrum des Moving-16-Tages-Windows [1]. Die täglichen Produkte werden hinsichtlich ihrer Qualität, Beobachtungsabdeckung,
+und zeitlichen Distanz zum interessierenden Zeitpunkt gewichtet [4].
+
+MCD43 Produkte verwenden L2G-lite Daten als Input[3].Wenn zuwenige Beobachtungen vorliegen ( aus den unterschiedlichen Orbits) dann wird mit Hilfe einer Datenbank, welche 
+urtypische BRDF Parameter enthältm eine "lower-magnitude" Inversion durchgeführt und angewandt[3]. Die Qualitätsüberprüfung der Daten wird mittlerweile als "stage 3" kategorisiert und bedeuted, 
+dass die Datenqualität mittels unabhängigen Messungen und statistisch Robusten Methoden überprüft und verbessert wurde [6].
+
+Temporäre Auflösung : Täglich
+Auflösung: ~ 500 m
+Projektion:  Sinusoidal
+Datenfromat: HDF Stack ( 4 oder 5 muss erst gecheckt werden)
+
+
+MCD43A2 Quality Product
+==========================
+
+
 Die Beobachtungen sind auf den neunten Tag der 16 Tages Periode gewichtet[3]. Dies führt auch zu einer besseren Qualiät in höheren Breiten. Im Vergleich hierzu Version 5 verwendet ein 
-Fenster von nur vier Beobachtungen pro Tag. [3]
+Fenster von nur vier Beobachtungen pro Tag. [3]. Die Qualitätsinformation für die Bänder 1 - 7 befinden sich im HDF-Stack in den Layern 11- 17 und weisen die Qualität nach folgendem Schlüssel aus [7]: 
+	0 = best quality, full inversion (WoDs, RMSE majority good) 
+    	1 = good quality, full inversion (also including the cases that no clear sky observations over the day of interest or the Solar Zenith Angle is too large even WoDs, RMSE majority good)                           
+    	2 = Magnitude inversion (numobs >=7)                        
+   	3 = Magnitude inversion (numobs >=2&<7)                     
+    	4 = Fill value                                              
 
+
+MCD43A4 NBAR Data
+=================
+
+MODIS MCD43A4 Version 6 ist ein Nadir BRDF angepasstes Reflexionsprodukt (NBAR) aus ebenfalls 16 tägigen Aqua und Terra Daten. Die Daten werden für den Sonnenhöchststand derTagesepoche berechnet [9].
+Daraus resultiert ein stabiles und konsistentes NBAR Produkt. Die Daten werden mit einem überblicksartigen Qualitylayer für jedes Band in einem HDF Stack verspeichert. Es wird jedoch explizit darauf hingewiesen, 
+bei Berechnugen oder sonstiger Verwendung die Qualityinfo aus den MCD43A2 Produkten zu vewenden, da diese genauer ist. Die berechneten Reflexionswerte werden für jedes Band als Rasterdaten in 16bit verspeichert. 
+Fill value oder NoData value ist 32767 [8].
 
