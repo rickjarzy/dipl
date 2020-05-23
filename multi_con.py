@@ -4,15 +4,29 @@ import os
 import glob
 from osgeo import gdal
 
-def convert_hdf(root_in_dir, root_out_dir, topic, tile):
-    in_dir = os.path.join(root_in_dir, topic, tile)
-    out_dir = os.path.join(root_out_dir, topic, tile)
+
+def convert_hdf(root_in_dir):
+    in_dir = root_in_dir
+    out_dir = in_dir.split("\\")
+    out_dir[3] = "tiff"
+    out_dir = r"\\".join(out_dir)
+
+
     os.chdir(in_dir)
     hdf_list = glob.glob("*hdf")
     raster_count = len(hdf_list)
     for raster in hdf_list:
-        print("processing {} from tile {}".format(raster, tile))
-def multi_convert()
+        print("processing {} to out_dir: {}".format(raster, out_dir))
+
+        break
+
+
+def multi_convert(jobs_list):
+    for root in jobs_list:
+        convert_hdf(root)
+        break
+    # with multiprocessing.Pool() as pool:
+    #     pool.map(convert_hdf, jobs_list)
 
 
 def cpu_bound(number):
@@ -24,29 +38,26 @@ def find_sums(numbers):
 
 if __name__ == "__main__":
 
+    root_in_dir = r"R:\modis\v6\hdf"
 
-    root_in_dir = r"E:\modis\v6\hdf"
-    root_out_dir = r"E:\modis\v6\tiff"
 
     topics = ["MCD43A2", "MCD43A4"]
     kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
+    job_list = []
 
     for topic in topics:
-        print("processing topc: ", topic)
+        print("processing topic: ", topic)
 
         for k in kacheln:
-            convert_hdf(root_in_dir, root_out_dir, topic, k)
+            job_list.append(os.path.join(root_in_dir, topic, k))
 
+    print(job_list)
+    out_dir = job_list[0].split("\\")
+    out_dir[3] = "tiff"
+    print(job_list[0].split("\\"))
+    print(r"\\".join(out_dir))
 
-
-
-
-
-
-
-
-
-
+    multi_convert(job_list)
 
 
 
