@@ -2,31 +2,98 @@ import multiprocessing
 import time
 import os
 import glob
-from osgeo import gdal
+from osgeo import gdal, gdalconst
 
 
 def convert_hdf(root_in_dir):
     in_dir = root_in_dir
+    os.chdir(in_dir)
+    hdf_list = glob.glob("*.hdf")
+
     out_dir = in_dir.split("\\")
     out_dir[3] = "tiff"
-    out_dir = r"\\".join(out_dir)
+    out_dir = "\\".join(out_dir)
 
+    # get geo reference
+    ref_dir = in_dir.split("\\")
+    topic = ref_dir[4]
+    ref_dir[2]="v5"
+    ref_dir[3]="reference_tiffs"
+    ref_dir = r"\\".join(ref_dir)
 
-    os.chdir(in_dir)
-    hdf_list = glob.glob("*hdf")
+    ref_ras = gdal.Open(os.path.join(ref_dir, "reff.tif"))
+    ref_ras_geo = ref_ras.GetGeoTransform()
+    ref_ras_pro = ref_ras.GetProjection()
+
     raster_count = len(hdf_list)
+    driver_tiff = gdal.GetDriverByName("GTiff")
+
+    if topic == "MCD43A2":
+        hdf_bands = [i for i in range(11, 18, 1)]
+        bytes_raster = gdalconst.GDT_Byte       # bytes 0 - 255
+        no_data_value = 255
+    else:
+        hdf_bands = [i for i in range(7,14,1)]
+        bytes_raster = gdalconst.GDT_Int16      # 16 bit data#
+        no_data_value = 32767
+
+    tif_bands = [i for i in range(1,8,1)]
+
+    cols_hdf = ref_ras.RasterXSize
+    rows_hdf = ref_ras.RasterYSize
+
+    del ref_ras
     for raster in hdf_list:
         print("processing {} to out_dir: {}".format(raster, out_dir))
+        print("{} bands: {}".format(topic, hdf_bands))
+        print("tif ras: ", tif_bands)
 
+        hdf_ras = gdal.Open(hdf_list[0], gdal.GA_ReadOnly)
+        hdf_sub_data_sets = hdf_ras.GetSubDatasets()
+
+        del hdf_ras
+        # creating the tif file
+        try:
+            print("FUll Out Path: ", os.path.join(str(out_dir), raster[:-4] + ".tif"))
+            tif_ras = driver_tiff.Create(os.path.join(str(out_dir), raster[:-4] + ".tif"),
+                                     xsize=cols_hdf,
+                                     ysize=rows_hdf,
+                                     bands=len(hdf_bands),
+                                     eType=bytes_raster)
+        except Exception as create_ras_exception:
+            print(create_ras_exception)
+
+        # set projection
+        tif_ras.SetProjection(ref_ras_pro)
+        tif_ras.SetGeoTransform(ref_ras_geo)
+
+        # pull all bands from the hdf and store it in the new rasterfile
+        for sat_band_counter in range(0,len(hdf_bands),1):
+            print("Writing hdf band {} to tif band {}".format(hdf_bands[sat_band_counter], tif_bands[sat_band_counter]))
+
+
+            hdf_ras = gdal.Open(hdf_sub_data_sets[hdf_bands[sat_band_counter]][0])
+
+            tif_band = tif_ras.GetRasterBand(tif_bands[sat_band_counter])
+            hdf_band = hdf_ras.GetRasterBand(1)             # each subdata set in the hdf is counted as a seperate raster file with band one!
+
+
+            tif_band.SetNoDataValue(no_data_value)
+
+            tif_band.WriteArray(hdf_band.ReadAsArray())
+            tif_band.FlushCache()
+            del hdf_band, tif_band
+
+        del tif_ras, hdf_ras
         break
 
 
 def multi_convert(jobs_list):
-    for root in jobs_list:
-        convert_hdf(root)
-        break
-    # with multiprocessing.Pool() as pool:
-    #     pool.map(convert_hdf, jobs_list)
+    # for root in jobs_list:
+    #     convert_hdf(root)
+    #     break
+    with multiprocessing.Pool() as pool:
+        pool.map(convert_hdf, jobs_list)
 
 
 def cpu_bound(number):
@@ -39,6 +106,7 @@ def find_sums(numbers):
 if __name__ == "__main__":
 
     root_in_dir = r"R:\modis\v6\hdf"
+    root_ref_dir = r"R:\modis\v5\reference_tiffs"
 
 
     topics = ["MCD43A2", "MCD43A4"]
@@ -46,16 +114,8 @@ if __name__ == "__main__":
     job_list = []
 
     for topic in topics:
-        print("processing topic: ", topic)
-
         for k in kacheln:
             job_list.append(os.path.join(root_in_dir, topic, k))
-
-    print(job_list)
-    out_dir = job_list[0].split("\\")
-    out_dir[3] = "tiff"
-    print(job_list[0].split("\\"))
-    print(r"\\".join(out_dir))
 
     multi_convert(job_list)
 

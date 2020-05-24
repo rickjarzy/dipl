@@ -28,8 +28,7 @@ dass die Datenqualität mittels unabhängigen Messungen und statistisch Robusten M
 Temporäre Auflösung : Täglich
 Auflösung: ~ 500 m
 Projektion:  Sinusoidal
-Datenfromat: HDF Stack ( 4 oder 5 muss erst gecheckt werden)
-
+Datenfromat: HDF4 Stack
 
 MCD43A2 Quality Product
 ==========================
@@ -51,4 +50,14 @@ MODIS MCD43A4 Version 6 ist ein Nadir BRDF angepasstes Reflexionsprodukt (NBAR) 
 Daraus resultiert ein stabiles und konsistentes NBAR Produkt. Die Daten werden mit einem überblicksartigen Qualitylayer für jedes Band in einem HDF Stack verspeichert. Es wird jedoch explizit darauf hingewiesen, 
 bei Berechnugen oder sonstiger Verwendung die Qualityinfo aus den MCD43A2 Produkten zu vewenden, da diese genauer ist. Die berechneten Reflexionswerte werden für jedes Band als Rasterdaten in 16bit verspeichert. 
 Fill value oder NoData value ist 32767 [8].
+
+
+
+############################
+Data Processing
+############################
+
+HDF Entpacken
+============================
+
 
