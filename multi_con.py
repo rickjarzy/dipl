@@ -59,7 +59,7 @@ def convert_hdf(root_in_dir):
                                      xsize=cols_hdf,
                                      ysize=rows_hdf,
                                      bands=len(hdf_bands),
-                                     eType=bytes_raster)
+                                     eType=bytes_raster)    # use no compression because the file size increased to the double size
         except Exception as create_ras_exception:
             print(create_ras_exception)
 
