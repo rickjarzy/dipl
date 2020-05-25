@@ -51,7 +51,7 @@ Daraus resultiert ein stabiles und konsistentes NBAR Produkt. Die Daten werden m
 bei Berechnugen oder sonstiger Verwendung die Qualityinfo aus den MCD43A2 Produkten zu vewenden, da diese genauer ist. Die berechneten Reflexionswerte werden für jedes Band als Rasterdaten in 16bit verspeichert. 
 Fill value oder NoData value ist 32767 [8].
 
-
+C:\Program Files\Java\jdk1.8.0_101\bin
 
 ############################
 Data Processing

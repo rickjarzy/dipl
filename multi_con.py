@@ -45,8 +45,8 @@ def convert_hdf(root_in_dir):
     del ref_ras
     for raster in hdf_list:
         print("processing {} to out_dir: {}".format(raster, out_dir))
-        print("{} bands: {}".format(topic, hdf_bands))
-        print("tif ras: ", tif_bands)
+
+
 
         hdf_ras = gdal.Open(hdf_list[0], gdal.GA_ReadOnly)
         hdf_sub_data_sets = hdf_ras.GetSubDatasets()
@@ -69,7 +69,7 @@ def convert_hdf(root_in_dir):
 
         # pull all bands from the hdf and store it in the new rasterfile
         for sat_band_counter in range(0,len(hdf_bands),1):
-            print("Writing hdf band {} to tif band {}".format(hdf_bands[sat_band_counter], tif_bands[sat_band_counter]))
+            print("Writing hdf band {} to tif band {} of raster {}".format(hdf_bands[sat_band_counter], tif_bands[sat_band_counter], raster[:-4] + ".tif"))
 
 
             hdf_ras = gdal.Open(hdf_sub_data_sets[hdf_bands[sat_band_counter]][0])
@@ -85,7 +85,7 @@ def convert_hdf(root_in_dir):
             del hdf_band, tif_band
 
         del tif_ras, hdf_ras
-        break
+
 
 
 def multi_convert(jobs_list):
@@ -104,7 +104,7 @@ def find_sums(numbers):
         pool.map(cpu_bound, numbers)
 
 if __name__ == "__main__":
-
+    start_time = time.time()
     root_in_dir = r"R:\modis\v6\hdf"
     root_ref_dir = r"R:\modis\v5\reference_tiffs"
 
@@ -121,10 +121,11 @@ if __name__ == "__main__":
 
 
 
-    numbers = [5_000_000 + x for x in range(20)]
 
-    start_time = time.time()
-    find_sums(numbers)
+
+
+    # numbers = [5_000_000 + x for x in range(20)]
+    # find_sums(numbers)
     duration = time.time() - start_time
 
     print(f"Duration {duration} seconds")
