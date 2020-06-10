@@ -16,6 +16,8 @@ def process_tile(input_data_dict):
     list_data = input_data_dict["data"]
     window_size = input_data_dict["sg_window"]
     out_dir = input_data_dict["out_dir"]
+    qual_dir = input_data_dict["in_dir_qs"]
+    data_dir = input_data_dict["in_dir_tf"]
 
     print("Process Band: ", band)
 
@@ -27,7 +29,7 @@ def process_tile(input_data_dict):
     else:
         #print("\nStart Processing tile %s" % tile)
         #print("len data == qual: ", len(list_data) == len(list_qual))
-
+        tile = list_data[0].split(".")[2]
         master_raster = gdal.Open(list_data[0], gdal.GA_ReadOnly)
         raster_band = master_raster.GetRasterBand(band)
         geo_trafo = master_raster.GetGeoTransform()
@@ -43,6 +45,8 @@ def process_tile(input_data_dict):
         del master_raster
 
         print("RASTER size and type: ", ras_data.shape, " - ", type(ras_data))
+        print("Qual dir: ", qual_dir)
+        print("Ras dir: ", data_dir)
 
         numbers_of_data_epochs = len(list_data)
 
@@ -50,21 +54,41 @@ def process_tile(input_data_dict):
         qual_block = numpy.zeros([window_size, block_size_x,block_size_y])
 
         # Initialize data fiting -load satellite data into data blocks
-
+        # ============================================================
         for i in range(0,window_size,1):
-            print("load sat data for band %d: %s" %(band, list_data[i]))
-            print("load qual data for band %d: %s" %(band, list_qual[i]))
 
             #load qual file
-            with gdal.Open(list_qual[i], gdal.GA_ReadOnly) as qual_ras:
+            try:
+                qual_ras = gdal.Open(os.path.join(qual_dir, tile, list_qual[i]), gdal.GA_ReadOnly)
+
+                print("load qual data for band %d: %s" % (band, list_qual[i]))
                 qual_band = qual_ras.GetRasterBand(band)
-                qual_block[band,:,:] = qual_band.ReadAsArray()
+                qual_block[i, :, :] = qual_band.ReadAsArray()
 
-            with gdal.Open(list_data[i], gdal.GA_ReadOnly) as data_ras:
+                del qual_ras
+            except Exception as ErrorQualRasReading:
+                print("# ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+            # load satellite data
+            try:
+                data_ras = gdal.Open(os.path.join(data_dir, tile, list_data[i]), gdal.GA_ReadOnly)
+                print("load sat data for band %d: %s" % (band, list_data[i]))
                 data_band = data_ras.GetRasterBand(band)
+                data_block[i, :, :] = data_band.ReadAsArray()
+
+                del data_ras
+
+            except Exception as ErrorRasterDataReading:
+                print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+
+        print("Datablock shape: ", data_block.shape)
+        print(data_block)
 
 
+        # END of Initializing
+        # ===============================================================
 
+        # START FITTING
+        # ===============================================================
 
         # for i in range(0,len(list_qual),1):
         #     window_end_index = i + window_size
@@ -122,6 +146,8 @@ if __name__ == "__main__":
         list_of_bands_to_process.append({"band":b,
                                          "qual":qual_files_names_list,
                                          "data": data_files_names_list,
+                                         "in_dir_qs": in_dir_qs,
+                                         "in_dir_tf": in_dir_tf,
                                          "sg_window": sg_window,
                                          "out_dir": out_dir_fit})
 
