@@ -10,10 +10,6 @@ def convert_hdf(root_in_dir):
     os.chdir(in_dir)
     hdf_list = glob.glob("*.hdf")
 
-    out_dir = in_dir.split("\\")
-    out_dir[3] = "tiff_single"
-    out_dir = "\\".join(out_dir)
-
     # get geo reference
     ref_dir = in_dir.split("\\")
     topic = ref_dir[4]
@@ -24,6 +20,13 @@ def convert_hdf(root_in_dir):
     ref_ras = gdal.Open(os.path.join(ref_dir, "reff.tif"))
     ref_ras_geo = ref_ras.GetGeoTransform()
     ref_ras_pro = ref_ras.GetProjection()
+
+    out_dir = in_dir.split("\\")
+    out_dir[3] = "tiff_single"
+    out_dir_tiles = out_dir[3:]
+    out_dir = "E:\\MODIS_Data\\v6\\" + "\\".join(out_dir_tiles)
+#    out_dir = "\\".join(out_dir)
+
 
     raster_count = len(hdf_list)
     driver_tiff = gdal.GetDriverByName("GTiff")
@@ -66,8 +69,9 @@ def convert_hdf(root_in_dir):
                 tif_ras = driver_tiff.Create(os.path.join(str(out_dir), raster_name + ".tif"),
                                              xsize=cols_hdf,
                                              ysize=rows_hdf,
-                                             bands=len(hdf_bands),
-                                             eType=bytes_raster)  # use no compression because the file size increased to the double size
+                                             bands=1,
+                                             eType=bytes_raster,
+                                             options=['COMPRESS=LZW'])  # use no compression because the file size increased to the double size
             except Exception as create_ras_exception:
                 print(create_ras_exception)
 
@@ -108,29 +112,32 @@ def find_sums(numbers):
         pool.map(cpu_bound, numbers)
 
 if __name__ == "__main__":
-    start_time = time.time()
-    root_in_dir = r"R:\modis\v6\hdf"
-    root_ref_dir = r"R:\modis\v5\reference_tiffs"
+    try:
+        start_time = time.time()
+        root_in_dir = r"R:\modis\v6\hdf"
+        root_ref_dir = r"R:\modis\v5\reference_tiffs"
 
 
-    topics = ["MCD43A2", "MCD43A4"]
-    kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
-    job_list = []
+        topics = ["MCD43A2", "MCD43A4"]
+        kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
+        job_list = []
 
-    for topic in topics:
-        for k in kacheln:
-            job_list.append(os.path.join(root_in_dir, topic, k))
+        for topic in topics:
+            for k in kacheln:
+                job_list.append(os.path.join(root_in_dir, topic, k))
 
-    multi_convert(job_list)
-
-
+        multi_convert(job_list)
 
 
 
 
-    # numbers = [5_000_000 + x for x in range(20)]
-    # find_sums(numbers)
-    duration = time.time() - start_time
 
-    print(f"Duration {duration} seconds")
-    print("Programm ENDE")
+
+        # numbers = [5_000_000 + x for x in range(20)]
+        # find_sums(numbers)
+        duration = time.time() - start_time
+
+        print(f"Duration {duration} seconds")
+        print("Programm ENDE")
+    except KeyboardInterrupt:
+        print("Programm Stoped by User")
