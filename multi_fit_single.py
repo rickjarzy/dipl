@@ -4,7 +4,7 @@ import numpy
 import os
 import glob
 import time
-import multiprocessing
+#import multiprocessing
 from torchvision.transforms import ToTensor
 
 from osgeo import gdal
@@ -134,18 +134,13 @@ def multi_fit(jobs_list):
     with multiprocessing.Pool() as pool:
         pool.map(process_tile, jobs_list)
 
-def multi_fit_gpu(patch_list):
-    with torch.multiprocessing.Pool() as pool:
-        return_liste = pool.map(checK_mp, patch_list)
-        print("CHECK MULTIPROCESSING")
 
-        return return_liste
-
-def checK_mp(input_liste):
-
-    return [element + "_was_processed" for element in input_liste]
 
 def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data):
+
+    data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device).share_memory_()
+    qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device).share_memory_()
+
     for i in range(0, sg_window, 1):
 
         # load qual file
@@ -174,6 +169,22 @@ def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data)
     print("Datablock shape: ", data_block.shape)
     print(data_block)
     return data_block, qual_block
+
+def multi_fit_gpu(data_block, qual_block, patch_list):
+
+    print("\n GPU MULTI")
+    # with torch.multiprocessing.Pool() as pool:
+    #     return_liste = pool.map(check_mp, [data_block, qual_block, patch_list])
+    #     print(return_liste)
+    torch.multiprocessing.set_sharing_strategy('file_system')
+    torch.multiprocessing.spawn(check_mp, args=(data_block, qual_block, patch_list), nprocs=8)
+    print("CHECK MULTIPROCESSING")
+
+def check_mp(data_block, qual_block, input_liste):
+    print("Spawn process")
+
+    return input_liste
+
 
 if __name__ == "__main__":
 
@@ -225,21 +236,17 @@ if __name__ == "__main__":
             # Initialize data fiting -load satellite data into data blocks
             # ============================================================
 
-            data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
-            qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
+
 
             data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data)
+            print("SHAPE OF DATA: ", data_block.shape)
 
-            data_block_indizes = [i for i in range(0,2400,300)]
-            print("datablock indizes: ", data_block_indizes)
-
-            data_block_slices = []
+            data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
 
 
+            ##test = [data_block[:, i, :] for i in data_block_indizes]
 
-            test = ["hallo", "check", "shshsh", "jsjsjsjsjsjsjs", "khaskjdhakjshd", "lksjlkfj"]
-
-            return_test_liste = multi_fit_gpu(test)
+            return_test_liste = multi_fit_gpu(data_block, qual_block, data_block_indizes)
 
             print(return_test_liste)
 
