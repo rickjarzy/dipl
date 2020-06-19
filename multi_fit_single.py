@@ -197,6 +197,12 @@ if __name__ == "__main__":
         device = torch.device("cpu")
         print("CPU is available")
 
+
+    # # 4TB USB Festplatte
+    # in_dir_qs = r"F:\modis\v6\tiff_single\MCD43A2"
+    # in_dir_tf = r"F:\modis\v6\tiff_single\MCD43A4"
+
+    # 2T USB3 Festplatte und Home Rechner
     in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
     in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
     out_dir_fit = r"E:\MODIS_Data\v6\fitted"
