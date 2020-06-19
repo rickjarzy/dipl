@@ -126,16 +126,6 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-
-def multi_fit(jobs_list):
-    # for root in jobs_list:
-    #     convert_hdf(root)
-    #     break
-    with multiprocessing.Pool() as pool:
-        pool.map(process_tile, jobs_list)
-
-
-
 def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data):
 
     data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device).share_memory_()
@@ -176,14 +166,23 @@ def multi_fit_gpu(data_block, qual_block, patch_list):
     # with torch.multiprocessing.Pool() as pool:
     #     return_liste = pool.map(check_mp, [data_block, qual_block, patch_list])
     #     print(return_liste)
-    torch.multiprocessing.set_sharing_strategy('file_system')
-    torch.multiprocessing.spawn(check_mp, args=(data_block, qual_block, patch_list), nprocs=8)
+    # torch.multiprocessing.set_sharing_strategy('file_system')
+    # torch.multiprocessing.spawn(check_mp, args=(data_block, qual_block, patch_list), nprocs=8)
+    process_id = 0
+    process_list = []
+    for patch in patch_list:
+        print("start process for patch", process_id)
+
+        p = torch.multiprocessing.Process(target=check_mp, args=(data_block, qual_block, patch, process_id))
+        process_list.append(p)
+        p.start()
+        process_id += 0
+    print(data_block)
     print("CHECK MULTIPROCESSING")
 
-def check_mp(data_block, qual_block, input_liste):
-    print("Spawn process")
-
-    return input_liste
+def check_mp(data_block, qual_block, input_liste, process_id):
+    print("Spawn process for id: ", process_id)
+    data_block**0
 
 
 if __name__ == "__main__":
@@ -278,20 +277,6 @@ if __name__ == "__main__":
             #     else:
             #         print("\nreached end of processing in tile {} - index {} - {}".format(tile, i, window_end_index))
             #         break
-
-
-    #multi_fit(list_of_bands_to_process)
-
-
-
-
-
-
-
-
-
-
-
 
 
     print("elapsed time: ", time.time() - start , " [sec]")
