@@ -1,6 +1,8 @@
 import torch.multiprocessing as mp
 import torch
 
+#https://stackoverflow.com/questions/50735493/how-to-share-a-list-of-tensors-in-pytorch-multiprocessing
+
 def foo(worker,tl):
     tl[worker] += (worker+1) * 1000
 
