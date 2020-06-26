@@ -33,6 +33,7 @@
 # ==============================================================
 # ============ Functionlisting =================================
 def fitq(lv,pv,xv):
+
     # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
     # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
     # pv ... Gewichtsvektor mit  p = 1 fuer MCD43A2 = 0 0.2 bei MCD43A2=1 (bei MODIS) in erster

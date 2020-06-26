@@ -126,11 +126,13 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data):
+def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device):
 
-    data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device).share_memory_()
-    qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device).share_memory_()
+    data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
+    qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
 
+    data_block.share_memory_()
+    qual_block.share_memory_()
     for i in range(0, sg_window, 1):
 
         # load qual file
@@ -166,17 +168,22 @@ def multi_fit_gpu(data_block, qual_block, patch_list):
     # with torch.multiprocessing.Pool() as pool:
     #     return_liste = pool.map(check_mp, [data_block, qual_block, patch_list])
     #     print(return_liste)
-    # torch.multiprocessing.set_sharing_strategy('file_system')
+    torch.multiprocessing.set_sharing_strategy('file_system')
     # torch.multiprocessing.spawn(check_mp, args=(data_block, qual_block, patch_list), nprocs=8)
+
     process_id = 0
     process_list = []
     for patch in patch_list:
         print("start process for patch", process_id)
 
         p = torch.multiprocessing.Process(target=check_mp, args=(data_block, qual_block, patch, process_id))
-        process_list.append(p)
         p.start()
+        process_list.append(p)
+
         process_id += 0
+    for pr in process_list:
+        pr.join()
+
     print(data_block)
     print("CHECK MULTIPROCESSING")
 
@@ -190,7 +197,7 @@ if __name__ == "__main__":
     start = time.time()
 
     if torch.cuda.is_available():
-        device = torch.device("cuda")
+        device = torch.device("cpu")
         print("CUDA is available")
     else:
         device = torch.device("cpu")
@@ -243,17 +250,21 @@ if __name__ == "__main__":
 
 
 
-            data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data)
+            data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device)
             print("SHAPE OF DATA: ", data_block.shape)
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
+            data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
+            qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
+
+            print("reshaped data block: ", data_block.shape)
+            print("reshaped qual block: ", qual_block.shape)
 
 
+            break
             ##test = [data_block[:, i, :] for i in data_block_indizes]
 
-            return_test_liste = multi_fit_gpu(data_block, qual_block, data_block_indizes)
-
-            print(return_test_liste)
+            #return_test_liste = multi_fit_gpu(data_block, qual_block, data_block_indizes)
 
             # END of Initializing
             # ===============================================================
