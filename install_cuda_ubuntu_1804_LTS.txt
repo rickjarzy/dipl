@@ -1,0 +1,42 @@
+update NVIDIA GPU on UBUNTU
+https://forums.developer.nvidia.com/t/cant-install-new-driver-cannot-unload-module/63639/11
+
+1. Boot
+2. Bfore login STRG + ALT + F2 --> console login
+
+- sudo systemctl set-default multi-user.target   ( multiuser target deactivates XServer etc that uses a GUI)
+- sudo reboot 0
+
+- login as user
+- change to su
+- cd /home/user/path_to_new_NVIDIA_driver.run
+- bash NVIDIA-Linux_XXXX.run
+  .... install .....
+- nvidia-smi ---> should show newest CUDA Version and installed NVIDIA driver
+- systemctl set-default graphical.target
+- reboot 0
+sudo rm /etc/apt/sources.list.d/cuda*
+sudo apt remove --autoremove nvidia-cuda-toolkit
+sudo apt remove --autoremove nvidia-*
+
+sudo apt update
+sudo add-apt-repository ppa:graphics-driverssudo apt-key adv --fetch-keys  http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pubsudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+
+sudo apt update
+sudo apt install cuda-10-1
+sudo apt install libcudnn7
+
+# set PATH for cuda 10.1 installation
+if [ -d "/usr/local/cuda-10.1/bin/" ]; then
+    export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
+    export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+fi
+
+
+nvcc  – versionnvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2019 NVIDIA Corporation
+Built on Wed_Apr_24_19:10:27_PDT_2019
+Cuda compilation tools, release 10.1, V10.1.168
+
+
+/sbin/ldconfig -N -v $(sed ‘s/:/ /’ <<< $LD_LIBRARY_PATH) 2>/dev/null | grep libcudnn
