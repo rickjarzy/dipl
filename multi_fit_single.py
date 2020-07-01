@@ -213,6 +213,12 @@ if __name__ == "__main__":
     in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
     out_dir_fit = r"E:\MODIS_Data\v6\fitted"
 
+    if os.name == "posix":
+        in_dir_qs = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single"
+        in_dir_tf = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single"
+        out_dir_fit = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6"
+
+
 
     # kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
     tile = "h18v04"
