@@ -263,6 +263,11 @@ if __name__ == "__main__":
             data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
             qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
 
+            A = torch.ones(sg_window, 3)
+            torch.arange(1,15,1, out=A[:, 1])
+            torch.arange(1,15,1, out=A[:, 2])
+            A[:, 2] = A[:, 2]**2
+
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
 
