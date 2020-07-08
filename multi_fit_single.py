@@ -89,6 +89,7 @@ if __name__ == "__main__":
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
 
+            #todo: A-->xv, P --> pv, data_block --> lv in form bringen dass in die ausgleichsfunktion reinpasst
 
             break
             ##test = [data_block[:, i, :] for i in data_block_indizes]
