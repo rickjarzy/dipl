@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
 
 
-            data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device)
+            data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
             print("SHAPE OF DATA: ", data_block.shape)
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
