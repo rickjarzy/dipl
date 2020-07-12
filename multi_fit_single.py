@@ -72,23 +72,28 @@ if __name__ == "__main__":
             # Initialize data fiting -load satellite data into data blocks
             # ============================================================
 
-
-
-            data_block, qual_block = init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
+            data_block, qual_block = init_data_block(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
             print("SHAPE OF DATA: ", data_block.shape)
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
             data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
             qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
 
+            qual_block[qual_block==0]=1
+            qual_block[qual_block==1]=0.75
+            qual_block[qual_block==2]=0.5
+            qual_block[qual_block==3]=0.25
+
+
             A = torch.ones(sg_window, 3)
-            torch.arange(1,15,1, out=A[:, 1])
-            torch.arange(1,15,1, out=A[:, 2])
+            torch.arange(1,16,1, out=A[:, 1])
+            torch.arange(1,16,1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
 
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
-
+            print("qual values: ", qual_block[:, 0])
+            print("A: \n", A)
             #todo: A-->xv, P --> pv, data_block --> lv in form bringen dass in die ausgleichsfunktion reinpasst
 
             break

@@ -205,7 +205,7 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
+def init_data_block(sg_window, band,in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
 
     data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
     qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
@@ -218,7 +218,7 @@ def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data,
         try:
             qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
 
-            print("load qual data for band %d: %s" % (b, list_qual[i]))
+            print("load qual data for band %d: %s" % (band, list_qual[i]))
             #qual_band = qual_ras.GetRasterBand(1)
             qual_block[i, :, :] = torch.from_numpy(qual_ras.ReadAsArray()).to(device)
 
@@ -228,7 +228,7 @@ def init_data_block(sg_window, in_dir_qs, in_dir_tf, tile, list_qual, list_data,
         # load satellite data
         try:
             data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
-            print("load sat data for band %d: %s" % (b, list_data[i]))
+            print("load sat data for band %d: %s" % (band, list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray()).to(device)
 
