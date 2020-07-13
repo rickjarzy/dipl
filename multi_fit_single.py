@@ -77,6 +77,7 @@ if __name__ == "__main__":
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
             data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
+            print("data values: ", qual_block[:, 0, -1])
             qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
 
             qual_block[qual_block==0]=1
@@ -92,7 +93,7 @@ if __name__ == "__main__":
 
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
-            print("qual values: ", qual_block[:, 0])
+
             print("A: \n", A)
             #todo: A-->xv, P --> pv, data_block --> lv in form bringen dass in die ausgleichsfunktion reinpasst
 
