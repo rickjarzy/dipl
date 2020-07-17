@@ -24,7 +24,8 @@ def convert_hdf(root_in_dir):
     out_dir = in_dir.split("\\")
     out_dir[3] = "tiff_single"
     out_dir_tiles = out_dir[3:]
-    out_dir = "E:\\MODIS_Data\\v6\\" + "\\".join(out_dir_tiles)
+    #out_dir = "E:\\MODIS_Data\\v6\\" + "\\".join(out_dir_tiles)
+    out_dir = "R:\\modis\\v6\\" + "\\".join(out_dir_tiles)
 #    out_dir = "\\".join(out_dir)
 
 
@@ -47,12 +48,12 @@ def convert_hdf(root_in_dir):
     rows_hdf = ref_ras.RasterYSize
 
     del ref_ras
+
     for raster in hdf_list:
         print("processing {} to out_dir: {}".format(raster, out_dir))
 
 
-
-        hdf_ras = gdal.Open(hdf_list[0], gdal.GA_ReadOnly)
+        hdf_ras = gdal.Open(raster, gdal.GA_ReadOnly)
         hdf_sub_data_sets = hdf_ras.GetSubDatasets()
 
         del hdf_ras
@@ -64,22 +65,19 @@ def convert_hdf(root_in_dir):
 
             # creating the tif file
             try:
-                raster_name = ".".join(raster.split(".")[:4]) + ".band_%d"%tif_bands[sat_band_counter]
+                raster_name = ".".join(raster.split(".")[:4]) + ".band_%d" % tif_bands[sat_band_counter]
                 print("FUll Out Path: ", os.path.join(str(out_dir), raster_name + ".tif"))
                 tif_ras = driver_tiff.Create(os.path.join(str(out_dir), raster_name + ".tif"),
                                              xsize=cols_hdf,
                                              ysize=rows_hdf,
                                              bands=1,
-                                             eType=bytes_raster,
-                                             options=['COMPRESS=LZW'])  # use no compression because the file size increased to the double size
+                                             eType=bytes_raster)  # use no compression because the file size increased to the double size
             except Exception as create_ras_exception:
                 print(create_ras_exception)
 
             # set projection
             tif_ras.SetProjection(ref_ras_pro)
             tif_ras.SetGeoTransform(ref_ras_geo)
-
-
             hdf_ras = gdal.Open(hdf_sub_data_sets[hdf_bands[sat_band_counter]][0])
 
             tif_band = tif_ras.GetRasterBand(1)
@@ -87,12 +85,12 @@ def convert_hdf(root_in_dir):
 
 
             tif_band.SetNoDataValue(no_data_value)
+            hdf_rast_data = hdf_band.ReadAsArray()
 
-            tif_band.WriteArray(hdf_band.ReadAsArray())
+
+            tif_band.WriteArray(hdf_rast_data)
             tif_band.FlushCache()
             del hdf_band, tif_band, tif_ras
-
-
 
 
 
@@ -125,7 +123,7 @@ if __name__ == "__main__":
         for topic in topics:
             for k in kacheln:
                 job_list.append(os.path.join(root_in_dir, topic, k))
-
+        print("JOBLIST: \n", job_list)
         multi_convert(job_list)
 
 
