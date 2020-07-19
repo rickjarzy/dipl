@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     A = torch.ones(15,3)
     data = torch.rand(15,2400,2400)
-    qual = torch.rand(15,2400,2400)
+    qual = torch.round(torch.rand(15,2400,2400)*10)
 
     torch.arange(1,16,1, out=A[:,1])
     torch.arange(1,16,1, out=A[:, 2])
@@ -20,10 +20,12 @@ if __name__ == "__main__":
     qual_np = qual_np.reshape(15,2400*2400)
     qual_np = numpy.where(qual_np>0.5,1, qual_np)
 
-    data[(data>=0.5 & data <= 0.7)] = 1
 
     print("numpy qual")
     print(qual_np)
+
+
+
 
     print("data")
     print(data)

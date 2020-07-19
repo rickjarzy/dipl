@@ -3,6 +3,7 @@ import torch
 import os
 import glob
 import time
+import numpy
 #import multiprocessing
 from multi_fit_single_utils import *
 
@@ -43,6 +44,11 @@ if __name__ == "__main__":
     bands = list(range(1,8,1))
     print(bands)
     sg_window = 15
+    window_arr = torch.arange(0,sg_window,1)       # range from 0 to sg_window
+    fit_nr = torch.median(window_arr)               # just a tensor fomr 0 to sg_window
+    center = torch.median(window_arr)               # center index of the data stack
+    sigm = torch.ones(sg_window, 2400*2400)
+
 
     list_of_bands_to_process = []
 
@@ -80,22 +86,61 @@ if __name__ == "__main__":
             print("data values: ", qual_block[:, 0, -1])
             qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
 
-            qual_block[qual_block==0]=1
-            qual_block[qual_block==1]=0.75
-            qual_block[qual_block==2]=0.5
-            qual_block[qual_block==3]=0.25
+            qual_block[qual_block==0] = 1
+            qual_block[qual_block==1] = 0.75
+            qual_block[qual_block==2] = 0.25
+            qual_block[qual_block==3] = 0.1
 
+            qual_block[qual_block==255] = 0         # set to 0 so in the ausgleich the nan -> zero convertion is not needed
+                                                    # nan will be replaced by zeros so this is a shortcut to avoid that transformation
+            data_block[data_block==32767] = 0
 
-            A = torch.ones(sg_window, 3)
-            torch.arange(1,16,1, out=A[:, 1])
-            torch.arange(1,16,1, out=A[:, 2])
+            A = torch.ones(sg_window, 3).to(device=device)
+            torch.arange(1, sg_window + 1, 1, out=A[:, 1])
+            torch.arange(1, sg_window + 1, 1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
 
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
 
             print("A: \n", A)
+            print("QM: ", qual_block[:,0])
+
             #todo: A-->xv, P --> pv, data_block --> lv in form bringen dass in die ausgleichsfunktion reinpasst
+
+            print("Start fitting ...")
+            [a0, a1, a2] = fitq_cuda(data_block, qual_block, A[:,1], sg_window)
+
+            print("len a0: ", a0.shape)
+            print("len a1: ", a1.shape)
+            print("len a2: ", a2.shape)
+
+            # ------------------------------------------
+            # Logic for empty or not enought data spots
+            # ymin, ymax etc
+            # ------------------------------------------
+            print("calc new raster matrix ... ")
+
+            # fit the data
+            # A.shape = [15,1]
+            # a0.shape = [57600000]
+            fit = a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1))      # fit.shape: [15,5_760_000]
+
+            # calc new weights
+            delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
+            delta_lv[delta_lv<1] = 1                        #
+            sig = torch.sum(delta_lv,0)                     # sig.shape: [5_760_000]
+            sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
+
+            qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
+
+            print("delta_lv: ", delta_lv.shape)
+            print("calc new raster matrix - 2nd iteration ...")
+            [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
+            
+
+
+
 
             break
             ##test = [data_block[:, i, :] for i in data_block_indizes]
