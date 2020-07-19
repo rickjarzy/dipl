@@ -24,8 +24,8 @@ def convert_hdf(root_in_dir):
     out_dir = in_dir.split("\\")
     out_dir[3] = "tiff_single"
     out_dir_tiles = out_dir[3:]
-    #out_dir = "E:\\MODIS_Data\\v6\\" + "\\".join(out_dir_tiles)
-    out_dir = "R:\\modis\\v6\\" + "\\".join(out_dir_tiles)
+    out_dir = "E:\\MODIS_Data\\v6\\" + "\\".join(out_dir_tiles)
+    #out_dir = "R:\\modis\\v6\\" + "\\".join(out_dir_tiles)
 #    out_dir = "\\".join(out_dir)
 
 
@@ -52,6 +52,8 @@ def convert_hdf(root_in_dir):
     for raster in hdf_list:
         print("processing {} to out_dir: {}".format(raster, out_dir))
 
+        if "2000081" in raster:
+            break
 
         hdf_ras = gdal.Open(raster, gdal.GA_ReadOnly)
         hdf_sub_data_sets = hdf_ras.GetSubDatasets()
@@ -91,6 +93,8 @@ def convert_hdf(root_in_dir):
             tif_band.WriteArray(hdf_rast_data)
             tif_band.FlushCache()
             del hdf_band, tif_band, tif_ras
+
+
 
 
 
