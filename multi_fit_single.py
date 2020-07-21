@@ -4,6 +4,7 @@ import os
 import glob
 import time
 import numpy
+from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
 
@@ -137,10 +138,21 @@ if __name__ == "__main__":
             print("delta_lv: ", delta_lv.shape)
             print("calc new raster matrix - 2nd iteration ...")
             [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
-            
 
-
-
+            fit = a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1))
+            fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()
+            # write output raster
+            print("Fitlayer stats: ", fit_layer.shape)
+            out_ras_name = os.path.join(out_dir_fit, "firstfit.tif")
+            print("outdir: ", out_ras_name)
+            out_ras = master_raster_info[-1].Create(out_ras_name, 2400, 2400, 1, gdalconst.GDT_Int16)
+            out_band = out_ras.GetRasterBand(1)
+            out_band.WriteArray(fit_layer)
+            out_band.SetNoDataValue(32767)
+            out_ras.SetGeoTransform(master_raster_info[0])
+            out_ras.SetProjection(master_raster_info[1])
+            out_ras.FlushCache()
+            del out_ras
 
             break
             ##test = [data_block[:, i, :] for i in data_block_indizes]

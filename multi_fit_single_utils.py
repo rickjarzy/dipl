@@ -270,7 +270,7 @@ def get_master_raster_info(in_dir, tile, sat_product):
 
     master_raster = gdal.Open(master_raster_file_name, gdal.GA_ReadOnly)
     geo_trafo = master_raster.GetGeoTransform()
-    projection = master_raster.GetProjection
+    projection = master_raster.GetProjection()
 
     block_size_x = master_raster.RasterXSize
     block_size_y = master_raster.RasterYSize
@@ -303,6 +303,7 @@ def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list
         # load satellite data
         try:
             data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+
             print("load sat data for band %d: %s" % (band, list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray()).to(device)
