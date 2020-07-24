@@ -3,6 +3,7 @@ import torch
 import os
 import glob
 import time
+import socket
 import numpy
 from osgeo import gdalconst
 #import multiprocessing
@@ -29,9 +30,12 @@ if __name__ == "__main__":
     # in_dir_tf = r"F:\modis\v6\tiff_single\MCD43A4"
 
     # 2T USB3 Festplatte und Home Rechner
-    in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
-    in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
-    out_dir_fit = r"E:\MODIS_Data\v6\fitted"
+    if socket.gethostname() in ['XH-AT-NB-108', 'paul_buero']:
+        in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
+        in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
+        out_dir_fit = r"E:\MODIS_Data\v6\fitted"
+    else:
+        print("Check Data Drive Letter !!!!!")
 
     if os.name == "posix":
         in_dir_qs = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A2"
@@ -49,9 +53,9 @@ if __name__ == "__main__":
     fit_nr = torch.median(window_arr)               # just a tensor fomr 0 to sg_window
     center = torch.median(window_arr)               # center index of the data stack
     sigm = torch.ones(sg_window, 2400*2400)
+    half_window = numpy.floor(sg_window/2)
 
 
-    list_of_bands_to_process = []
 
     master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -62,13 +66,6 @@ if __name__ == "__main__":
         os.chdir(os.path.join(in_dir_tf, tile))
         list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))
 
-        list_of_bands_to_process.append({"band":b,
-                                         "in_dir_qs": in_dir_qs,
-                                         "in_dir_tf": in_dir_tf,
-                                         "sg_window": sg_window,
-                                         "out_dir": out_dir_fit,
-                                         "device":device,
-                                         "tile": tile})
 
         if int(len(list_qual)) != int(len(list_data)):
             print("\nBand %s cannot be processed!\n" % b)
@@ -83,17 +80,22 @@ if __name__ == "__main__":
             print("SHAPE OF DATA: ", data_block.shape)
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
-            data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
+            data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 32767 --> 0
             print("data values: ", qual_block[:, 0, -1])
-            qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))
+            qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
 
             qual_block[qual_block==0] = 1
             qual_block[qual_block==1] = 0.75
             qual_block[qual_block==2] = 0.25
             qual_block[qual_block==3] = 0.1
 
-            qual_block[qual_block==255] = 0         # set to 0 so in the ausgleich the nan -> zero convertion is not needed
-                                                    # nan will be replaced by zeros so this is a shortcut to avoid that transformation
+            noup_zero = torch.zeros(sg_window, 2400**2)         # noup = number of used pixels
+            noup_ones = torch.ones(sg_window, 2400**2)
+            noup_tensor = torch.where(qual_block == 255, noup_zero, noup_ones)
+            noup_tensor[noup_tensor != 0]=1
+
+            qual_block[qual_block==255] = 0                     # set to 0 so in the ausgleich the nan -> zero convertion is not needed
+                                                                # nan will be replaced by zeros so this is a shortcut to avoid that transformation
             data_block[data_block==32767] = 0
 
             A = torch.ones(sg_window, 3).to(device=device)
@@ -101,13 +103,36 @@ if __name__ == "__main__":
             torch.arange(1, sg_window + 1, 1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
 
+            # data ini to count how many data epochs are to the left and to the right of the center epoch etc
+
+            l_max = torch.ones([sg_window, 2400**2]) * torch.max(data_block, dim=0).values
+            l_min = torch.ones([sg_window, 2400**2]) * torch.min(data_block, dim=0).values
+
+            noup_l = torch.sum(noup_tensor[0:center], dim=0)
+            noup_r = torch.sum(noup_tensor[center + 1:], dim=0)
+            noup_c = torch.sum(noup_tensor[center], dim=0)
+            n = torch.sum(noup_tensor, dim=0)
+
+            ids_for_lin_fit = numpy.concatenate(
+                                                    (numpy.where(noup_l.numpy() <= 3),
+                                                     numpy.where(noup_r.numpy() <= 3),
+                                                     numpy.where(noup_c.numpy() <= 0),
+                                                     numpy.where(n.numpy() <= half_window)
+                                                     ),
+                                                    axis=1
+                                                )
+            iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
+            print("n:  ", n[:20])
+            print("ids: ", ids_for_lin_fit[:20])
+            print("iv: ", iv[:20])
+            print(iv.shape)
+
+            #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
+            #todo: linearen fit implementieren, dann ist die sache produktionsreif
+
+
             print("reshaped data block: ", data_block.shape)
             print("reshaped qual block: ", qual_block.shape)
-
-            print("A: \n", A)
-            print("QM: ", qual_block[:,0])
-
-            #todo: A-->xv, P --> pv, data_block --> lv in form bringen dass in die ausgleichsfunktion reinpasst
 
             print("Start fitting ...")
             [a0, a1, a2] = fitq_cuda(data_block, qual_block, A[:,1], sg_window)
@@ -135,7 +160,6 @@ if __name__ == "__main__":
 
             qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
 
-            print("delta_lv: ", delta_lv.shape)
             print("calc new raster matrix - 2nd iteration ...")
             [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
 
