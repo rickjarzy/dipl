@@ -18,7 +18,7 @@ if __name__ == "__main__":
     start = time.time()
 
     if torch.cuda.is_available():
-        device = torch.device("cpu")
+        device = torch.device("cuda")
         print("CUDA is available")
     else:
         device = torch.device("cpu")
@@ -84,6 +84,9 @@ if __name__ == "__main__":
             print("data values: ", qual_block[:, 0, -1])
             qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
 
+
+            sigm = torch.ones(sg_window, 2400**2)
+
             qual_block[qual_block==0] = 1
             qual_block[qual_block==1] = 0.75
             qual_block[qual_block==2] = 0.25
@@ -98,7 +101,7 @@ if __name__ == "__main__":
                                                                 # nan will be replaced by zeros so this is a shortcut to avoid that transformation
             data_block[data_block==32767] = 0
 
-            A = torch.ones(sg_window, 3).to(device=device)
+            A = torch.ones(sg_window, 3)
             torch.arange(1, sg_window + 1, 1, out=A[:, 1])
             torch.arange(1, sg_window + 1, 1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
@@ -150,20 +153,44 @@ if __name__ == "__main__":
             # fit the data
             # A.shape = [15,1]
             # a0.shape = [57600000]
-            fit = a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1))      # fit.shape: [15,5_760_000]
+            fit = torch.round(a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1)))      # fit.shape: [15,5_760_000])
+# """            fit[fit != fit] = 0                             # set nan to 0
+#             print("fited layer")
+#             print(fit[center, :])
+#             # calc new weights
+#             delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
+#             delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
+#             print("delta_lv: ")
+#             print(delta_lv)
+#             delta_lv[delta_lv<1] = 1                        #
+#             sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
+#             print("sig")
+#             print(sig)
+#             sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
+#
+#             print("sigm")
+#             print(sigm)
+#
+#             qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
+#
+#             print("calc new raster matrix - 2nd iteration ...")
+#             [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
+#
+#             fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
+#             print("fited layer")
+#             print(fit[center, :])"""
+            #linear fit
 
-            # calc new weights
-            delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
-            delta_lv[delta_lv<1] = 1                        #
-            sig = torch.sum(delta_lv,0)                     # sig.shape: [5_760_000]
-            sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
+            # [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
+            #
+            # fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
+            #
+            # #check if fit is bigger than max occouring values
+            # fit = torch.where(fit>l_max, l_max, fit)
+            # fit = torch.where(fit<l_min, l_min, fit)
 
-            qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
 
-            print("calc new raster matrix - 2nd iteration ...")
-            [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
-
-            fit = a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1))
+            # filtered epoch
             fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()
             # write output raster
             print("Fitlayer stats: ", fit_layer.shape)

@@ -119,9 +119,11 @@ def fitq(lv, pv, xv):
 
 # Linearer Fit, wenn zu wenige Beobachtungen im Zeitfenster vorliegen nach def. Kriterien
 # Bezeichnungen wie bei fitq
-def fitl_cuda(lv, pv, xv):
-    ax0 = xv ** 0  # schneller im vergleich zu funktion ones da kein gesonderter funktionsaufruf
-    ax1 = xv
+def fitl_cuda(lv, pv, xv, sg_window):
+
+    ax0 = torch.reshape(xv ** 0, (sg_window,1))  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
+    # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
+    ax1 = torch.reshape(xv ** 1, (sg_window,1))  # Vektor Laenge = 15 [1, 2 , 3 , 4 ... 15].T
 
     a11 = torch.sum(ax0 * pv * ax0, 0)
     a12 = torch.sum(ax0 * pv * ax1, 0)
@@ -282,8 +284,8 @@ def get_master_raster_info(in_dir, tile, sat_product):
 
 def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
 
-    data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
-    qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])).to(device)
+    data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]]))
+    qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]]))
 
     data_block.share_memory_()
     qual_block.share_memory_()
@@ -306,7 +308,7 @@ def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list
 
             print("load sat data for band %d: %s" % (band, list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
-            data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray()).to(device)
+            data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray())
 
             del data_ras
 
