@@ -138,7 +138,7 @@ if __name__ == "__main__":
             print("reshaped qual block: ", qual_block.shape)
 
             print("Start fitting ...")
-            [a0, a1, a2] = fitq_cuda(data_block, qual_block, A[:,1], sg_window)
+            [a0, a1, a2] = fitq_cuda(data_block.to(device), qual_block.to(device), A[:,1].to(device), sg_window, device)
 
             print("len a0: ", a0.shape)
             print("len a1: ", a1.shape)
@@ -154,40 +154,40 @@ if __name__ == "__main__":
             # A.shape = [15,1]
             # a0.shape = [57600000]
             fit = torch.round(a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1)))      # fit.shape: [15,5_760_000])
-# """            fit[fit != fit] = 0                             # set nan to 0
-#             print("fited layer")
-#             print(fit[center, :])
-#             # calc new weights
-#             delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
-#             delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
-#             print("delta_lv: ")
-#             print(delta_lv)
-#             delta_lv[delta_lv<1] = 1                        #
-#             sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
-#             print("sig")
-#             print(sig)
-#             sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
-#
-#             print("sigm")
-#             print(sigm)
-#
-#             qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
-#
-#             print("calc new raster matrix - 2nd iteration ...")
-#             [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
-#
-#             fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
-#             print("fited layer")
-#             print(fit[center, :])"""
+            fit[fit != fit] = 0                             # set nan to 0
+            print("fited layer")
+            print(fit[center, :])
+            # calc new weights
+            delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
+            delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
+            print("delta_lv: ")
+            print(delta_lv)
+            delta_lv[delta_lv<1] = 1                        #
+            sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
+            print("sig")
+            print(sig)
+            sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
+
+            print("sigm")
+            print(sigm)
+
+            qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
+
+            print("calc new raster matrix - 2nd iteration ...")
+            [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
+
+            fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
+            print("fited layer")
+            print(fit[center, :])
             #linear fit
 
-            # [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
-            #
-            # fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
-            #
-            # #check if fit is bigger than max occouring values
-            # fit = torch.where(fit>l_max, l_max, fit)
-            # fit = torch.where(fit<l_min, l_min, fit)
+            [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
+
+            fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
+
+            #check if fit is bigger than max occouring values
+            fit = torch.where(fit>l_max, l_max, fit)
+            fit = torch.where(fit<l_min, l_min, fit)
 
 
             # filtered epoch

@@ -14,7 +14,7 @@ import glob
 
 # ============ Functionlisting =================================
 
-def fitq_cuda(lv, pv, xv, sg_window):
+def fitq_cuda(lv, pv, A, sg_window, device):
     # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
     # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
     # pv ... Gewichtsvektor mit  p = 1 fuer MCD43A2 = 0 0.2 bei MCD43A2=1 (bei MODIS) in erster
@@ -23,45 +23,54 @@ def fitq_cuda(lv, pv, xv, sg_window):
     # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
     # A [ax0, ax1, ax2] Designmatrix
     # Formeln aus
+    #lv = lv.to(device)
+    #pv = pv.to(device)
+    #xv = xv.to(device)
 
-    ax0 = torch.reshape(xv ** 0, (sg_window,1))  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
-    # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
-    ax1 = torch.reshape(xv ** 1, (sg_window,1))  # Vektor Laenge = 15 [1, 2 , 3 , 4 ... 15].T
-    ax2 = torch.reshape(xv ** 2, (sg_window,1))  # [ 1 , 4 , 9 ... 225].T
+    print("inside fit q: ", lv)
+    # N = torch.inverse(torch.mm(torch.mm(A.T,P),A))
+    x_dach = torch.mm(torch.mm())
 
-    # ATPA Normalgleichungsmatrix
-    a11 = torch.sum(ax0 * pv * ax0, 0)
-    a12 = torch.sum(ax0 * pv * ax1, 0)
-    a13 = torch.sum(ax0 * pv * ax2, 0)
 
-    a22 = torch.sum(ax1 * pv * ax1, 0)
-    a23 = torch.sum(ax1 * pv * ax2, 0)
-    a33 = torch.sum(ax2 * pv * ax2, 0)
 
-    # Determinante (ATPA)
-    det = a11 * a22 * a33 + a12 * a23 * a13 \
-          + a13 * a12 * a23 - a13 * a22 * a13 \
-          - a12 * a12 * a33 - a11 * a23 * a23 \
-
-        # Invertierung (ATPA) mit: Quelle xxx mit Zitat
-    # da die Inverse von A symmetrisch ueber die Hauptdiagonale ist, entspricht ai12 = ai21
-    # (ATPA)-1
-    ai11 = (a22 * a33 - a23 * a23) / det
-    ai12 = (a13 * a23 - a12 * a33) / det
-    ai13 = (a12 * a23 - a13 * a22) / det
-    ai22 = (a11 * a33 - a13 * a13) / det
-    ai23 = (a13 * a12 - a11 * a23) / det
-    ai33 = (a11 * a22 - a12 * a12) / det
-
-    # ATPL mit Bezeichnung vx0 fueer Vektor x0 nansum ... fuer nodata-summe
-    vx0 = torch.sum(ax0 * pv * lv, 0)
-    vx1 = torch.sum(ax1 * pv * lv, 0)
-    vx2 = torch.sum(ax2 * pv * lv, 0)
-
-    # Quotienten der quadratischen Gleichung ... bzw. Ergebnis dieser Funktion
-    a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
-    a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
-    a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
+    # ax0 = torch.reshape(xv ** 0, (sg_window,1))  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
+    # # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
+    # ax1 = torch.reshape(xv ** 1, (sg_window,1))  # Vektor Laenge = 15 [1, 2 , 3 , 4 ... 15].T
+    # ax2 = torch.reshape(xv ** 2, (sg_window,1))  # [ 1 , 4 , 9 ... 225].T
+    #
+    # # ATPA Normalgleichungsmatrix
+    # a11 = torch.sum(ax0 * pv * ax0, 0)
+    # a12 = torch.sum(ax0 * pv * ax1, 0)
+    # a13 = torch.sum(ax0 * pv * ax2, 0)
+    #
+    # a22 = torch.sum(ax1 * pv * ax1, 0)
+    # a23 = torch.sum(ax1 * pv * ax2, 0)
+    # a33 = torch.sum(ax2 * pv * ax2, 0)
+    #
+    # # Determinante (ATPA)
+    # det = a11 * a22 * a33 + a12 * a23 * a13 \
+    #       + a13 * a12 * a23 - a13 * a22 * a13 \
+    #       - a12 * a12 * a33 - a11 * a23 * a23 \
+    #
+    #     # Invertierung (ATPA) mit: Quelle xxx mit Zitat
+    # # da die Inverse von A symmetrisch ueber die Hauptdiagonale ist, entspricht ai12 = ai21
+    # # (ATPA)-1
+    # ai11 = (a22 * a33 - a23 * a23) / det
+    # ai12 = (a13 * a23 - a12 * a33) / det
+    # ai13 = (a12 * a23 - a13 * a22) / det
+    # ai22 = (a11 * a33 - a13 * a13) / det
+    # ai23 = (a13 * a12 - a11 * a23) / det
+    # ai33 = (a11 * a22 - a12 * a12) / det
+    #
+    # # ATPL mit Bezeichnung vx0 fueer Vektor x0 nansum ... fuer nodata-summe
+    # vx0 = torch.sum(ax0 * pv * lv, 0)
+    # vx1 = torch.sum(ax1 * pv * lv, 0)
+    # vx2 = torch.sum(ax2 * pv * lv, 0)
+    #
+    # # Quotienten der quadratischen Gleichung ... bzw. Ergebnis dieser Funktion
+    # a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
+    # a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
+    # a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
 
     return a0, a1, a2
 
