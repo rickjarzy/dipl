@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # in_dir_tf = r"F:\modis\v6\tiff_single\MCD43A4"
 
     # 2T USB3 Festplatte und Home Rechner
-    if socket.gethostname() in ['XH-AT-NB-108', 'paul_buero']:
+    if socket.gethostname() in ['XH-AT-NB-108', 'paul_buero', 'Paul-PC']:
         in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
@@ -68,6 +68,8 @@ if __name__ == "__main__":
 
 
         if int(len(list_qual)) != int(len(list_data)):
+            print("Len list_qual: ", len(list_qual))
+            print("Len list_data: ", len(list_data))
             print("\nBand %s cannot be processed!\n" % b)
             # print("len data %d != %d qual: \n" % ( len(list_data), len(list_qual)))
 
