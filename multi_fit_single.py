@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # in_dir_tf = r"F:\modis\v6\tiff_single\MCD43A4"
 
     # 2T USB3 Festplatte und Home Rechner
-    if socket.gethostname() in ['XH-AT-NB-108', 'paul_buero', 'Paul-PC']:
+    if socket.gethostname() in ['XH-AT-NB-108', 'Paul-PC']:
         in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
@@ -91,8 +91,8 @@ if __name__ == "__main__":
 
             qual_block[qual_block==0] = 1
             qual_block[qual_block==1] = 0.75
-            qual_block[qual_block==2] = 0.25
-            qual_block[qual_block==3] = 0.1
+            qual_block[qual_block==2] = 0.1
+            qual_block[qual_block==3] = 0.01
 
             noup_zero = torch.zeros(sg_window, 2400**2)         # noup = number of used pixels
             noup_ones = torch.ones(sg_window, 2400**2)
@@ -177,20 +177,17 @@ if __name__ == "__main__":
 
             print("calc new raster matrix - 2nd iteration ...")
             [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
-
             fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
             print("fited layer")
             print(fit[center, :])
+
             #linear fit
-
             [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
-
             fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
 
             #check if fit is bigger than max occouring values
             fit = torch.where(fit>l_max, l_max, fit)
             fit = torch.where(fit<l_min, l_min, fit)
-
 
             # filtered epoch
             fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()

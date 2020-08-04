@@ -4,32 +4,41 @@ import numpy
 
 if __name__ == "__main__":
 
-    A = torch.ones(15,3)
-    data = torch.rand(15,2400,2400)
-    qual = torch.round(torch.rand(15,2400,2400)*10)
+    qual_block = numpy.ones([2400**2,3,1])
 
-    torch.arange(1,16,1, out=A[:,1])
-    torch.arange(1,16,1, out=A[:, 2])
-    A[:, 2] = A[: ,2]**2
+    data_block = numpy.random.rand(2400**2,3,1)
 
+    A = numpy.array(([1,1,1], [1,2,4],[1,3,9]))
 
-    data = torch.reshape(data, (15,2400*2400))
-    qual = torch.reshape(qual, (15, 2400 * 2400))
+    #A_multi_dim = numpy.ones((2400*2,3,3))
+    #A_multi_dim_T = numpy.ones((2400**2,3,3))
 
-    qual_np = numpy.random.rand(15,2400,2400)
-    qual_np = qual_np.reshape(15,2400*2400)
-    qual_np = numpy.where(qual_np>0.5,1, qual_np)
+    #numpy.multiply(A_multi_dim, A, out=A_multi_dim)
 
+    #numpy.multiply(A_multi_dim_T, A.T, out=A_multi_dim_T)
+    pv = numpy.array([1, 0.7, 0.1])
+    pvv = numpy.array((pv,pv,pv,pv,pv)).reshape(5,3,1)
 
-    print("numpy qual")
-    print(qual_np)
+    pvv = numpy.multiply(qual_block, pv.reshape(3,1))
 
+    print(pvv)
+    print("###############")
+    print("ATP : ", numpy.multiply(A.T,pv.reshape(3,1)))
+    print("ATPA: ", numpy.linalg.inv(numpy.dot(numpy.multiply(A.T,pv.reshape(3,1)),A)))
+    print("#################")
 
+    ATP = numpy.multiply(A.T,pvv)
+    ATPA = numpy.linalg.inv(numpy.dot(ATP,A))
 
+    ATPL = numpy.multiply(ATP,data_block)
 
-    print("data")
-    print(data)
+    #ATPA_check = numpy.dot(ATP[0],)
 
+    print(A)
+    print(pvv)
+
+    print(ATP)
+    print(ATPA)
     print("Programm ENDE")
 
 
