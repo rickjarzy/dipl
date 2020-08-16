@@ -27,9 +27,13 @@ def fitq_cuda(lv, pv, A, sg_window, device):
     #pv = pv.to(device)
     #xv = xv.to(device)
 
-    print("inside fit q: ", lv)
+    print("inside fit q\nlv.shape: ", lv.shape)
+    print("pv.shape: ", pv.shape)
+    print("A: ", A)
     # N = torch.inverse(torch.mm(torch.mm(A.T,P),A))
-    x_dach = torch.mm(torch.mm())
+    P = torch.ones([2400**2,sg_window,sg_window]).to(device)
+
+
 
 
 
@@ -296,8 +300,8 @@ def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list
     data_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]]))
     qual_block = torch.from_numpy(numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]]))
 
-    data_block.share_memory_()
-    qual_block.share_memory_()
+    #data_block.share_memory_()
+    #qual_block.share_memory_()
     for i in range(0, sg_window, 1):
 
         # load qual file
@@ -317,7 +321,7 @@ def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list
 
             print("load sat data for band %d: %s" % (band, list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
-            data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray())
+            data_block[i, :, :] = torch.from_numpy(data_ras.ReadAsArray()).to(device)
 
             del data_ras
 

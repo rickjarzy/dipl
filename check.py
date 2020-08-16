@@ -52,7 +52,7 @@ def calc_cuda():
 
     qual_block = torch.ones([2400**2,3,1]).to(device)
     data_block = torch.ones([2400**2,3,1]).to(device)                   # 5760000,3
-    P = torch.ones([2400,3,3]).to(device)
+    P = torch.ones([2400**2,3,3]).to(device)
     A = torch.tensor(([1.,1.,1.],[1.,2.,4.],[1.,3.,9.])).to(device)     # 3,3
 
     pv = torch.reshape(torch.tensor([1,0.7,0.1]).to(device), (3,1))     # 3,1
@@ -82,6 +82,7 @@ if __name__ == "__main__":
 
     start = time()
     calc_cuda()
+    #calc_numpy()
     print("time elapsed: ", time()-start, " [sec]")
     print("Programm ENDE")
 

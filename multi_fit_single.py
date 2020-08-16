@@ -82,9 +82,13 @@ if __name__ == "__main__":
             print("SHAPE OF DATA: ", data_block.shape)
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
-            data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 32767 --> 0
+
+            #data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 32767 --> 0
+            data_block = torch.reshape((sg_window, master_raster_info[2] * master_raster_info[3]), data_block)  # contains instead of 32767 --> 0
             print("data values: ", qual_block[:, 0, -1])
-            qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
+
+            #qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
+            qual_block = torch.reshape((sg_window, master_raster_info[2] * master_raster_info[3]), qual_block)  # contains instead of 255 --> 0
 
 
             sigm = torch.ones(sg_window, 2400**2)
@@ -103,7 +107,7 @@ if __name__ == "__main__":
                                                                 # nan will be replaced by zeros so this is a shortcut to avoid that transformation
             data_block[data_block==32767] = 0
 
-            A = torch.ones(sg_window, 3)
+            A = torch.ones(sg_window, 3).to(device)
             torch.arange(1, sg_window + 1, 1, out=A[:, 1])
             torch.arange(1, sg_window + 1, 1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
@@ -140,7 +144,7 @@ if __name__ == "__main__":
             print("reshaped qual block: ", qual_block.shape)
 
             print("Start fitting ...")
-            [a0, a1, a2] = fitq_cuda(data_block.to(device), qual_block.to(device), A[:,1].to(device), sg_window, device)
+            [a0, a1, a2] = fitq_cuda(data_block.to(device), qual_block.to(device), A, sg_window, device)
 
             print("len a0: ", a0.shape)
             print("len a1: ", a1.shape)
