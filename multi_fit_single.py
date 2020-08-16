@@ -137,7 +137,7 @@ if __name__ == "__main__":
             print(iv.shape)
 
             #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-            #todo: linearen fit implementieren, dann ist die sache produktionsreif
+            #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
 
             print("reshaped data block: ", data_block.shape)
