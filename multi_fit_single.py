@@ -79,18 +79,19 @@ if __name__ == "__main__":
             # ============================================================
 
             data_block, qual_block = init_data_block(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
-            print("SHAPE OF DATA: ", data_block.shape)
+
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
 
             #data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 32767 --> 0
-            data_block = torch.reshape((sg_window, master_raster_info[2] * master_raster_info[3]), data_block)  # contains instead of 32767 --> 0
-            print("data values: ", qual_block[:, 0, -1])
+            data_block = torch.reshape(data_block, (master_raster_info[2] * master_raster_info[3], sg_window, 1))  # contains instead of 32767 --> 0
+
 
             #qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
-            qual_block = torch.reshape((sg_window, master_raster_info[2] * master_raster_info[3]), qual_block)  # contains instead of 255 --> 0
-
-
+            qual_block = torch.reshape(qual_block, (master_raster_info[2] * master_raster_info[3], sg_window, 1))  # contains instead of 255 --> 0
+            print("SHAPE OF QUAL: ", qual_block.shape)
+            print("SHAPE OF DATA: ", data_block.shape)
+            print(data_block[0,:,:])
             sigm = torch.ones(sg_window, 2400**2)
 
             qual_block[qual_block==0] = 1
@@ -98,8 +99,8 @@ if __name__ == "__main__":
             qual_block[qual_block==2] = 0.1
             qual_block[qual_block==3] = 0.01
 
-            noup_zero = torch.zeros(sg_window, 2400**2)         # noup = number of used pixels
-            noup_ones = torch.ones(sg_window, 2400**2)
+            noup_zero = torch.zeros(2400**2, sg_window, 1)         # noup = number of used pixels
+            noup_ones = torch.ones(2400**2, sg_window, 1)
             noup_tensor = torch.where(qual_block == 255, noup_zero, noup_ones)
             noup_tensor[noup_tensor != 0]=1
 
@@ -114,14 +115,15 @@ if __name__ == "__main__":
 
             # data ini to count how many data epochs are to the left and to the right of the center epoch etc
 
-            l_max = torch.ones([sg_window, 2400**2]) * torch.max(data_block, dim=0).values
-            l_min = torch.ones([sg_window, 2400**2]) * torch.min(data_block, dim=0).values
+            l_max = torch.ones([2400**2, sg_window, 1]) * torch.max(data_block, dim=0).values
+            l_min = torch.ones([2400**2, sg_window, 1]) * torch.min(data_block, dim=0).values
 
-            noup_l = torch.sum(noup_tensor[0:center], dim=0)
-            noup_r = torch.sum(noup_tensor[center + 1:], dim=0)
-            noup_c = torch.sum(noup_tensor[center], dim=0)
-            n = torch.sum(noup_tensor, dim=0)
-
+            noup_l = torch.sum(noup_tensor[:, 0:center, :], dim=0)
+            print("noup_l", noup_l)
+            noup_r = torch.sum(noup_tensor[:, center + 1:, :], dim=0)
+            noup_c = torch.sum(noup_tensor[:, center, :], dim=0)
+            n = torch.sum(noup_tensor, dim=1)
+            print("n: ", n.shape)
             ids_for_lin_fit = numpy.concatenate(
                                                     (numpy.where(noup_l.numpy() <= 3),
                                                      numpy.where(noup_r.numpy() <= 3),

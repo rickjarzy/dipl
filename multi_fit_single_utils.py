@@ -30,8 +30,10 @@ def fitq_cuda(lv, pv, A, sg_window, device):
     print("inside fit q\nlv.shape: ", lv.shape)
     print("pv.shape: ", pv.shape)
     print("A: ", A)
-    # N = torch.inverse(torch.mm(torch.mm(A.T,P),A))
-    P = torch.ones([2400**2,sg_window,sg_window]).to(device)
+
+
+
+
 
 
 

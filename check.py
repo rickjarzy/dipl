@@ -68,6 +68,8 @@ def calc_cuda():
     ATP = torch.mul(A.T, pvv)
     ATPA = torch.inverse(torch.matmul(ATP,A))                          # has the ability to multiply a 2d and a 3d matrix
     print("P: \n", P[0], " - shape: ", P.shape)
+    print("pv: shape {}\n".format(pv.shape), pv)
+    print("pvv: shape {}\n".format(pvv.shape), pvv)
     print("A: \n", A, " - shape: ", A.shape)
     print("ATP: \n", ATP[0], " - shape: ", ATP.shape)
     print("ATPA: \n", ATPA[0], " - shape: ", ATPA.shape)
