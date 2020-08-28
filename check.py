@@ -81,10 +81,42 @@ def calc_cuda():
     x_dach = torch.matmul(ATPA, ATPL)
     print("x_dach: shape {}".format(x_dach.shape), x_dach)
 
+def calc_torch_cpu():
+
+    window = 15
+    if torch.cuda.is_available():
+        device = torch.device("cpu")
+        print("Cuda is available")
+    else:
+        device = torch.device("cpu")
+
+    qual_block = torch.ones([2400**2,1,window]).to(device)
+    data_block = torch.ones([2400**2,1,window]).to(device)                   # 5760000,3
+    pv = torch.rand([2400**2,1,window]).to(device)
+    A = torch.ones(window, 3).to(device)
+    torch.arange(1, window + 1, 1, out=A[:, 1])
+    torch.arange(1, window + 1, 1, out=A[:, 2])
+    A[:, 2] = A[:, 2] ** 2
+
+    ATP = torch.mul(A, pv)
+    ATPA = torch.inverse(torch.matmul(ATP,A))                          # has the ability to multiply a 2d and a 3d matrix
+    print("P: \n", P[0], " - shape: ", P.shape)
+    print("pv: shape {}\n".format(pv.shape), pv)
+    print("pvv: shape {}\n".format(pvv.shape), pvv)
+    print("A: \n", A, " - shape: ", A.shape)
+    print("ATP: \n", ATP[0], " - shape: ", ATP.shape)
+    print("ATPA: \n", ATPA[0], " - shape: ", ATPA.shape)
+
+    ATPL = torch.matmul(ATP,data_block)
+
+    print("ATPL: shape {}".format(ATPL.shape), ATPL)
+    x_dach = torch.matmul(ATPA, ATPL)
+    print("x_dach: shape {}".format(x_dach.shape), x_dach)
+
 if __name__ == "__main__":
 
     start = time()
-    calc_cuda()
+    calc_torch_cpu()
     #calc_numpy()
     print("time elapsed: ", time()-start, " [sec]")
     print("Programm ENDE")
