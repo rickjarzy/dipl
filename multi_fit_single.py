@@ -18,8 +18,10 @@ if __name__ == "__main__":
     start = time.time()
 
     if torch.cuda.is_available():
-        device = torch.device("cuda")
-        print("CUDA is available")
+        #device = torch.device("cuda")
+        #print("CUDA is available")
+        device = torch.device("cpu")
+        print("CUDA is available - but still using cpu due not enought GPU Mem")
     else:
         device = torch.device("cpu")
         print("CPU is available")
@@ -118,12 +120,16 @@ if __name__ == "__main__":
             l_max = torch.ones([2400**2, sg_window, 1]) * torch.max(data_block, dim=0).values
             l_min = torch.ones([2400**2, sg_window, 1]) * torch.min(data_block, dim=0).values
 
-            noup_l = torch.sum(noup_tensor[:, 0:center, :], dim=0)
+            noup_l = torch.sum(noup_tensor[:, 0:center, :], dim=1)                              # numbers of used epochs on the left side
             print("noup_l", noup_l)
-            noup_r = torch.sum(noup_tensor[:, center + 1:, :], dim=0)
-            noup_c = torch.sum(noup_tensor[:, center, :], dim=0)
+            noup_r = torch.sum(noup_tensor[:, center + 1:, :], dim=1)                           # numbers of used epochs on the right side
+            noup_c = torch.sum(noup_tensor[:, center, :], dim=1)                                # numbers of used epochs on the center epoch
+            noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
             n = torch.sum(noup_tensor, dim=1)
             print("n: ", n.shape)
+            print("noup_l: ", noup_l.shape)
+            print("noup_r: ", noup_r.shape)
+            print("noup_c: ", noup_c.shape)
             ids_for_lin_fit = numpy.concatenate(
                                                     (numpy.where(noup_l.numpy() <= 3),
                                                      numpy.where(noup_r.numpy() <= 3),
@@ -146,7 +152,7 @@ if __name__ == "__main__":
             print("reshaped qual block: ", qual_block.shape)
 
             print("Start fitting ...")
-            [a0, a1, a2] = fitq_cuda(data_block.to(device), qual_block.to(device), A, sg_window, device)
+            [a0, a1, a2] = fitq_cpu(data_block.to(device), qual_block.to(device), A, sg_window)
 
             print("len a0: ", a0.shape)
             print("len a1: ", a1.shape)

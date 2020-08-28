@@ -44,28 +44,29 @@ def calc_numpy():
 
 
 def calc_cuda():
+
+    window = 3
     if torch.cuda.is_available():
         device = torch.device("cuda")
         print("Cuda is available")
     else:
         device = torch.device("cpu")
 
-    qual_block = torch.ones([2400**2,3,1]).to(device)
-    data_block = torch.ones([2400**2,3,1]).to(device)                   # 5760000,3
-    P = torch.ones([2400**2,3,3]).to(device)
+    qual_block = torch.ones([2400**2,window,1]).to(device)
+    data_block = torch.ones([2400**2,window,1]).to(device)                   # 5760000,3
+    P = torch.ones([2400**2,window,3]).to(device)
     A = torch.tensor(([1.,1.,1.],[1.,2.,4.],[1.,3.,9.])).to(device)     # 3,3
 
     pv = torch.reshape(torch.tensor([1,0.7,0.1]).to(device), (3,1))     # 3,1
     pvv = torch.mul(qual_block,pv).to(device)           # elementwise multiplication - 5760000,3,1
 
-
-    P_temp = torch.eye(3).to(device)                    # elementwise multiplication
+    P_temp = torch.eye(window).to(device)                    # elementwise multiplication
 
     P[:,1,1] = 0.7
     P[:,2,2] = 0.1
     P = torch.mul(P,P_temp)
 
-    ATP = torch.mul(A.T, pvv)
+    ATP = torch.mul(A, pvv)
     ATPA = torch.inverse(torch.matmul(ATP,A))                          # has the ability to multiply a 2d and a 3d matrix
     print("P: \n", P[0], " - shape: ", P.shape)
     print("pv: shape {}\n".format(pv.shape), pv)
