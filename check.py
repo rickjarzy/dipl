@@ -91,18 +91,22 @@ def calc_torch_cpu():
         device = torch.device("cpu")
 
     qual_block = torch.ones([2400**2,1,window]).to(device)
-    data_block = torch.ones([2400**2,1,window]).to(device)                   # 5760000,3
+    data_block = torch.ones([2400**2,window,1]).to(device)                   # 5760000,3
     pv = torch.rand([2400**2,1,window]).to(device)
     A = torch.ones(window, 3).to(device)
     torch.arange(1, window + 1, 1, out=A[:, 1])
     torch.arange(1, window + 1, 1, out=A[:, 2])
     A[:, 2] = A[:, 2] ** 2
-
-    ATP = torch.mul(A, pv)
+    print("size A: ", A.shape)
+    print(A)
+    print("size P: ", pv.shape)
+    print(pv)
+    ATP = torch.mul(A.T, pv)
+    print("size ATP", ATP.shape)
+    print(ATP)
     ATPA = torch.inverse(torch.matmul(ATP,A))                          # has the ability to multiply a 2d and a 3d matrix
-    print("P: \n", P[0], " - shape: ", P.shape)
+
     print("pv: shape {}\n".format(pv.shape), pv)
-    print("pvv: shape {}\n".format(pvv.shape), pvv)
     print("A: \n", A, " - shape: ", A.shape)
     print("ATP: \n", ATP[0], " - shape: ", ATP.shape)
     print("ATPA: \n", ATPA[0], " - shape: ", ATPA.shape)

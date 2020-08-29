@@ -85,136 +85,144 @@ if __name__ == "__main__":
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
 
-            #data_block = torch.reshape(data_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 32767 --> 0
+            qual_block = torch.reshape(qual_block, (master_raster_info[2] * master_raster_info[3], 1, sg_window))  # contains instead of 255 --> 0
+
             data_block = torch.reshape(data_block, (master_raster_info[2] * master_raster_info[3], sg_window, 1))  # contains instead of 32767 --> 0
 
 
-            #qual_block = torch.reshape(qual_block, (sg_window, master_raster_info[2]*master_raster_info[3]))                                            # contains instead of 255 --> 0
-            qual_block = torch.reshape(qual_block, (master_raster_info[2] * master_raster_info[3], sg_window, 1))  # contains instead of 255 --> 0
+
             print("SHAPE OF QUAL: ", qual_block.shape)
             print("SHAPE OF DATA: ", data_block.shape)
-            print(data_block[0,:,:])
-            sigm = torch.ones(sg_window, 2400**2)
+
+            A = torch.ones(sg_window, 3).to(device)
+            torch.arange(1, sg_window + 1, 1, out=A[:, 1])
+            torch.arange(1, sg_window + 1, 1, out=A[:, 2])
+            A[:, 2] = A[:, 2]**2
+            print("A Matrix : ", A.shape)
+
 
             qual_block[qual_block==0] = 1
             qual_block[qual_block==1] = 0.75
             qual_block[qual_block==2] = 0.1
             qual_block[qual_block==3] = 0.01
 
-            noup_zero = torch.zeros(2400**2, sg_window, 1)         # noup = number of used pixels
-            noup_ones = torch.ones(2400**2, sg_window, 1)
+            noup_zero = torch.zeros(2400**2, 1, sg_window)         # noup = number of used epochs/pixels
+            noup_ones = torch.ones(2400**2, 1, sg_window)
+
             noup_tensor = torch.where(qual_block == 255, noup_zero, noup_ones)
-            noup_tensor[noup_tensor != 0]=1
+#            noup_tensor[noup_tensor != 0]=1        # obsolete
+            del noup_zero, noup_ones
 
             qual_block[qual_block==255] = 0                     # set to 0 so in the ausgleich the nan -> zero convertion is not needed
-                                                                # nan will be replaced by zeros so this is a shortcut to avoid that transformation
+            #                                                     # nan will be replaced by zeros so this is a shortcut to avoid that transformation
             data_block[data_block==32767] = 0
 
-            A = torch.ones(sg_window, 3).to(device)
-            torch.arange(1, sg_window + 1, 1, out=A[:, 1])
-            torch.arange(1, sg_window + 1, 1, out=A[:, 2])
-            A[:, 2] = A[:, 2]**2
+            # # data ini to count how many data epochs are to the left and to the right of the center epoch etc
+            l_max = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.max(data_block, dim=0).values, [1, 15])
+            l_min = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.min(data_block, dim=0).values, [1, 15])
 
-            # data ini to count how many data epochs are to the left and to the right of the center epoch etc
+            #todo: es wird noch nicht in die richtige achse der noup_l, noup_r, noup_c summiert --> checken
+            # noup_l:  torch.Size([5760000, 7])
+            # noup_r:  torch.Size([5760000, 7])
+            # noup_c:  torch.Size([5760000, 1])   --> der dürfte passen
 
-            l_max = torch.ones([2400**2, sg_window, 1]) * torch.max(data_block, dim=0).values
-            l_min = torch.ones([2400**2, sg_window, 1]) * torch.min(data_block, dim=0).values
 
-            noup_l = torch.sum(noup_tensor[:, 0:center, :], dim=1)                              # numbers of used epochs on the left side
-            print("noup_l", noup_l)
-            noup_r = torch.sum(noup_tensor[:, center + 1:, :], dim=1)                           # numbers of used epochs on the right side
-            noup_c = torch.sum(noup_tensor[:, center, :], dim=1)                                # numbers of used epochs on the center epoch
+            noup_l = torch.sum(noup_tensor[:, :, 0:center], dim=1)                              # numbers of used epochs on the left side
+            noup_r = torch.sum(noup_tensor[:, :, center + 1:], dim=1)                           # numbers of used epochs on the right side
+
+            print("noup_tensor.shape: ", noup_tensor.shape)
+            print(noup_tensor[0, :, 0:center])
+            print("sum: ", torch.sum(noup_tensor[:, :, center], dim=1), " - shape: ", torch.sum(noup_tensor[:, :, center], dim=1).shape)
+
+            noup_c = torch.sum(noup_tensor[:, :, center], dim=1)                                # numbers of used epochs on the center epoch
             noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
-            n = torch.sum(noup_tensor, dim=1)
-            print("n: ", n.shape)
+
+            # n = torch.sum(noup_tensor, dim=1)
+            # del noup_tensor
+            # print("n: ", n.shape)
             print("noup_l: ", noup_l.shape)
             print("noup_r: ", noup_r.shape)
             print("noup_c: ", noup_c.shape)
-            ids_for_lin_fit = numpy.concatenate(
-                                                    (numpy.where(noup_l.numpy() <= 3),
-                                                     numpy.where(noup_r.numpy() <= 3),
-                                                     numpy.where(noup_c.numpy() <= 0),
-                                                     numpy.where(n.numpy() <= half_window)
-                                                     ),
-                                                    axis=1
-                                                )
-            iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
-            print("n:  ", n[:20])
-            print("ids: ", ids_for_lin_fit[:20])
-            print("iv: ", iv[:20])
-            print(iv.shape)
+            # ids_for_lin_fit = numpy.concatenate(
+            #                                         (numpy.where(noup_l.numpy() <= 3),
+            #                                          numpy.where(noup_r.numpy() <= 3),
+            #                                          numpy.where(noup_c.numpy() <= 0),
+            #                                          numpy.where(n.numpy() <= half_window)
+            #                                          ),
+            #                                         axis=1
+            #                                     )
+            # iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
+            #
+            # #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
+            # #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
+            #
+            #
+            # print("Start fitting ...")
+            # [a0, a1, a2] = fitq_cpu(data_block, qual_block, A, sg_window)
+            #
+            # print("len a0: ", a0.shape)
+            # print("len a1: ", a1.shape)
+            # print("len a2: ", a2.shape)
+            #
+            # # ------------------------------------------
+            # # Logic for empty or not enought data spots
+            # # ymin, ymax etc
+            # # ------------------------------------------
+            # print("calc new raster matrix ... ")
 
-            #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-            #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
-
-
-            print("reshaped data block: ", data_block.shape)
-            print("reshaped qual block: ", qual_block.shape)
-
-            print("Start fitting ...")
-            [a0, a1, a2] = fitq_cpu(data_block.to(device), qual_block.to(device), A, sg_window)
-
-            print("len a0: ", a0.shape)
-            print("len a1: ", a1.shape)
-            print("len a2: ", a2.shape)
-
-            # ------------------------------------------
-            # Logic for empty or not enought data spots
-            # ymin, ymax etc
-            # ------------------------------------------
-            print("calc new raster matrix ... ")
-
-            # fit the data
-            # A.shape = [15,1]
-            # a0.shape = [57600000]
-            fit = torch.round(a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1)))      # fit.shape: [15,5_760_000])
-            fit[fit != fit] = 0                             # set nan to 0
-            print("fited layer")
-            print(fit[center, :])
-            # calc new weights
-            delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
-            delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
-            print("delta_lv: ")
-            print(delta_lv)
-            delta_lv[delta_lv<1] = 1                        #
-            sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
-            print("sig")
-            print(sig)
-            sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
-
-            print("sigm")
-            print(sigm)
-
-            qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
-
-            print("calc new raster matrix - 2nd iteration ...")
-            [a0, a1, a2] = fitq_cuda(data_block, qual_updated, A[:, 1], sg_window)
-            fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
-            print("fited layer")
-            print(fit[center, :])
-
-            #linear fit
-            [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
-            fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
-
-            #check if fit is bigger than max occouring values
-            fit = torch.where(fit>l_max, l_max, fit)
-            fit = torch.where(fit<l_min, l_min, fit)
-
-            # filtered epoch
-            fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()
-            # write output raster
-            print("Fitlayer stats: ", fit_layer.shape)
-            out_ras_name = os.path.join(out_dir_fit, "firstfit.tif")
-            print("outdir: ", out_ras_name)
-            out_ras = master_raster_info[-1].Create(out_ras_name, 2400, 2400, 1, gdalconst.GDT_Int16)
-            out_band = out_ras.GetRasterBand(1)
-            out_band.WriteArray(fit_layer)
-            out_band.SetNoDataValue(32767)
-            out_ras.SetGeoTransform(master_raster_info[0])
-            out_ras.SetProjection(master_raster_info[1])
-            out_ras.FlushCache()
-            del out_ras
+            # # fit the data
+            # # A.shape = [15,1]
+            # # a0.shape = [57600000]
+            # fit = torch.round(a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1)))      # fit.shape: [15,5_760_000])
+            # fit[fit != fit] = 0                             # set nan to 0
+            # print("fited layer")
+            # print(fit[center, :])
+            #
+            # # calc new weights
+            # delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
+            # delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
+            # sigm = torch.ones(2400 ** 2, sg_window, 1)
+            # print("delta_lv: ")
+            # print(delta_lv)
+            # delta_lv[delta_lv<1] = 1                        #
+            # sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
+            # print("sig")
+            # print(sig)
+            # sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
+            #
+            # print("sigm")
+            # print(sigm)
+            #
+            # qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
+            #
+            # print("calc new raster matrix - 2nd iteration ...")
+            # [a0, a1, a2] = fitq_cpu(data_block, qual_updated, A, sg_window)
+            # fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
+            # print("fited layer")
+            # print(fit[center, :])
+            #
+            # #linear fit
+            # [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
+            # fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
+            #
+            # #check if fit is bigger than max occouring values
+            # fit = torch.where(fit>l_max, l_max, fit)
+            # fit = torch.where(fit<l_min, l_min, fit)
+            #
+            # # filtered epoch
+            # fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()
+            # # write output raster
+            # print("Fitlayer stats: ", fit_layer.shape)
+            # out_ras_name = os.path.join(out_dir_fit, "firstfit.tif")
+            # print("outdir: ", out_ras_name)
+            # out_ras = master_raster_info[-1].Create(out_ras_name, 2400, 2400, 1, gdalconst.GDT_Int16)
+            # out_band = out_ras.GetRasterBand(1)
+            # out_band.WriteArray(fit_layer)
+            # out_band.SetNoDataValue(32767)
+            # out_ras.SetGeoTransform(master_raster_info[0])
+            # out_ras.SetProjection(master_raster_info[1])
+            # out_ras.FlushCache()
+            # del out_ras
 
             break
             ##test = [data_block[:, i, :] for i in data_block_indizes]

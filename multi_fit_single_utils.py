@@ -42,10 +42,12 @@ def fitq_cpu(lv, pv, A, sg_window):
     print("pv.shape: ", pv.shape)
     print("A: ", A , " - ", A.shape)
 
-    ATP = torch.mul(A,pv)
-    print("ATP: ", ATP[0], " - ", ATP.shape)
-    ATPA = torch.matmul(ATP.T,A)
-    print("ATPA: ", ATPA, " - ", ATPA.shape)
+    # ATP = torch.mul(A.T,pv)
+    # print("ATP: ", ATP[0], " - ", ATP.shape)
+    # ATPA = torch.matmul(ATP.T,A)
+    # print("ATPA: ", ATPA, " - ", ATPA.shape)
+
+
 
 
 
@@ -300,8 +302,6 @@ def init_data_block(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list
         except Exception as ErrorRasterDataReading:
             print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
-    print("Datablock shape: ", data_block.shape)
-    print(data_block)
     return data_block, qual_block
 
 def multi_fit_gpu(data_block, qual_block, patch_list):
