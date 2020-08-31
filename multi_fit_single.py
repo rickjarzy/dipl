@@ -121,45 +121,46 @@ if __name__ == "__main__":
             l_max = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.max(data_block, dim=0).values, [1, 15])
             l_min = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.min(data_block, dim=0).values, [1, 15])
 
-            #todo: es wird noch nicht in die richtige achse der noup_l, noup_r, noup_c summiert --> checken
-            # noup_l:  torch.Size([5760000, 7])
-            # noup_r:  torch.Size([5760000, 7])
-            # noup_c:  torch.Size([5760000, 1])   --> der dürfte passen
-
-
-            noup_l = torch.sum(noup_tensor[:, :, 0:center], dim=1)                              # numbers of used epochs on the left side
-            noup_r = torch.sum(noup_tensor[:, :, center + 1:], dim=1)                           # numbers of used epochs on the right side
-
-            print("noup_tensor.shape: ", noup_tensor.shape)
-            print(noup_tensor[0, :, 0:center])
-            print("sum: ", torch.sum(noup_tensor[:, :, center], dim=1), " - shape: ", torch.sum(noup_tensor[:, :, center], dim=1).shape)
-
+            noup_l = torch.sum(noup_tensor[:, 0, 0:center], dim=1)                              # numbers of used epochs on the left side
+            noup_r = torch.sum(noup_tensor[:, 0, center + 1:], dim=1)                           # numbers of used epochs on the right side
             noup_c = torch.sum(noup_tensor[:, :, center], dim=1)                                # numbers of used epochs on the center epoch
-            noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
+            #noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
 
-            # n = torch.sum(noup_tensor, dim=1)
-            # del noup_tensor
-            # print("n: ", n.shape)
-            print("noup_l: ", noup_l.shape)
+            print("\nDim Check for NOUP:")
+            print("noup_tensor.shape: ", noup_tensor.shape)
+            print("noup_l.shape: ", noup_tensor[:, :, :center].shape)
+            print("noup_l.shape: ", noup_tensor[:, :, :center])
+            print("sum : ", torch.sum(noup_tensor[:, 0, :center], dim=1))
+            print("sum shape: ", torch.sum(noup_tensor[:, 0, :center], dim=1).shape)
+            print("\nnoup_l: ", noup_l.shape)
             print("noup_r: ", noup_r.shape)
             print("noup_c: ", noup_c.shape)
-            # ids_for_lin_fit = numpy.concatenate(
-            #                                         (numpy.where(noup_l.numpy() <= 3),
-            #                                          numpy.where(noup_r.numpy() <= 3),
-            #                                          numpy.where(noup_c.numpy() <= 0),
-            #                                          numpy.where(n.numpy() <= half_window)
-            #                                          ),
-            #                                         axis=1
-            #                                     )
-            # iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
-            #
-            # #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-            # #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
-            #
-            #
-            # print("Start fitting ...")
-            # [a0, a1, a2] = fitq_cpu(data_block, qual_block, A, sg_window)
-            #
+
+            n = torch.sum(noup_tensor[:,0,:], dim=1)                # count all pixels that are used on the entire sg_window for the least square
+            del noup_tensor
+            print("n: ", n.shape)
+            print("n: ", n)
+
+            ids_for_lin_fit = numpy.concatenate(
+                                                    (numpy.where(noup_l.numpy() <= 3),
+                                                     numpy.where(noup_r.numpy() <= 3),
+                                                     numpy.where(noup_c.numpy() <= 0),
+                                                     numpy.where(n.numpy() <= half_window)
+                                                     ),
+                                                    axis=1
+                                                )
+            iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
+
+            print("iv.shape: ", iv.shape)
+            print(iv[:60])
+
+            #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
+            #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
+
+
+            print("Start fitting ...")
+            [a0, a1, a2] = fitq_cpu(data_block, qual_block, A, sg_window)
+
             # print("len a0: ", a0.shape)
             # print("len a1: ", a1.shape)
             # print("len a2: ", a2.shape)

@@ -42,12 +42,12 @@ def fitq_cpu(lv, pv, A, sg_window):
     print("pv.shape: ", pv.shape)
     print("A: ", A , " - ", A.shape)
 
-    # ATP = torch.mul(A.T,pv)
-    # print("ATP: ", ATP[0], " - ", ATP.shape)
-    # ATPA = torch.matmul(ATP.T,A)
-    # print("ATPA: ", ATPA, " - ", ATPA.shape)
+    ATP = torch.mul(A.T, pv)
+    print("ATP: ", ATP[0], " - ", ATP.shape)
+    ATPA = torch.matmul(ATP, A)
+    print("ATPA: ", ATPA, " - ", ATPA.shape)
 
-
+    return None, None, None
 
 
 
