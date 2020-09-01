@@ -39,13 +39,17 @@ def fitq_cuda(lv, pv, A, sg_window, device):
 def fitq_cpu(lv, pv, A, sg_window):
 
     print("inside fit q\nlv.shape: ", lv.shape)
-    print("pv.shape: ", pv.shape)
-    print("A: ", A , " - ", A.shape)
+    print("pv.shape: ", pv.shape, " - type: ", pv.type())
+    print("A: ", A , " - ", A.shape, " - type: ", A.type())
 
     ATP = torch.mul(A.T, pv)
-    print("ATP: ", ATP[0], " - ", ATP.shape)
-    ATPA = torch.matmul(ATP, A)
+    print("ATP: ", ATP[0], " - ", ATP.shape, " - type: ", ATP.type())
+    ATPA = torch.inverse(torch.matmul(ATP, A))
     print("ATPA: ", ATPA, " - ", ATPA.shape)
+    ATPL = torch.matmul(ATP, lv)
+    del ATP
+    x_dach = torch.matmul(ATPA, ATPL)
+    print("x_dach: ", x_dach)
 
     return None, None, None
 

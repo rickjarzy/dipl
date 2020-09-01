@@ -98,6 +98,7 @@ if __name__ == "__main__":
             torch.arange(1, sg_window + 1, 1, out=A[:, 1])
             torch.arange(1, sg_window + 1, 1, out=A[:, 2])
             A[:, 2] = A[:, 2]**2
+            A = A.type(torch.DoubleTensor)
             print("A Matrix : ", A.shape)
 
 
