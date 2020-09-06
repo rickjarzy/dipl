@@ -80,77 +80,12 @@ if __name__ == "__main__":
             # Initialize data fiting -load satellite data into data blocks
             # ============================================================
 
-            data_block, qual_block = init_data_block(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
+            data_block, qual_block = init_data_block_torch(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
 
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
 
-            qual_block = torch.reshape(qual_block, (master_raster_info[2] * master_raster_info[3], 1, sg_window))  # contains instead of 255 --> 0
-
-            data_block = torch.reshape(data_block, (master_raster_info[2] * master_raster_info[3], sg_window, 1))  # contains instead of 32767 --> 0
-
-
-
-            print("SHAPE OF QUAL: ", qual_block.shape)
-            print("SHAPE OF DATA: ", data_block.shape)
-
-            A = torch.ones(sg_window, 3).to(device)
-            torch.arange(1, sg_window + 1, 1, out=A[:, 1])
-            torch.arange(1, sg_window + 1, 1, out=A[:, 2])
-            A[:, 2] = A[:, 2]**2
-            A = A.type(torch.DoubleTensor)
-            print("A Matrix : ", A.shape)
-
-
-            qual_block[qual_block==0] = 1
-            qual_block[qual_block==1] = 0.75
-            qual_block[qual_block==2] = 0.1
-            qual_block[qual_block==3] = 0.01
-
-            noup_zero = torch.zeros(2400**2, 1, sg_window)         # noup = number of used epochs/pixels
-            noup_ones = torch.ones(2400**2, 1, sg_window)
-
-            noup_tensor = torch.where(qual_block == 255, noup_zero, noup_ones)
-#            noup_tensor[noup_tensor != 0]=1        # obsolete
-            del noup_zero, noup_ones
-
-            qual_block[qual_block==255] = 0                     # set to 0 so in the ausgleich the nan -> zero convertion is not needed
-            #                                                     # nan will be replaced by zeros so this is a shortcut to avoid that transformation
-            data_block[data_block==32767] = 0
-
-            # # data ini to count how many data epochs are to the left and to the right of the center epoch etc
-            l_max = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.max(data_block, dim=0).values, [1, 15])
-            l_min = torch.ones([2400**2, 1, sg_window]) * torch.reshape(torch.min(data_block, dim=0).values, [1, 15])
-
-            noup_l = torch.sum(noup_tensor[:, 0, 0:center], dim=1)                              # numbers of used epochs on the left side
-            noup_r = torch.sum(noup_tensor[:, 0, center + 1:], dim=1)                           # numbers of used epochs on the right side
-            noup_c = torch.sum(noup_tensor[:, :, center], dim=1)                                # numbers of used epochs on the center epoch
-            #noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
-
-            print("\nDim Check for NOUP:")
-            print("noup_tensor.shape: ", noup_tensor.shape)
-            print("noup_l.shape: ", noup_tensor[:, :, :center].shape)
-            print("noup_l.shape: ", noup_tensor[:, :, :center])
-            print("sum : ", torch.sum(noup_tensor[:, 0, :center], dim=1))
-            print("sum shape: ", torch.sum(noup_tensor[:, 0, :center], dim=1).shape)
-            print("\nnoup_l: ", noup_l.shape)
-            print("noup_r: ", noup_r.shape)
-            print("noup_c: ", noup_c.shape)
-
-            n = torch.sum(noup_tensor[:,0,:], dim=1)                # count all pixels that are used on the entire sg_window for the least square
-            del noup_tensor
-            print("n: ", n.shape)
-            print("n: ", n)
-
-            ids_for_lin_fit = numpy.concatenate(
-                                                    (numpy.where(noup_l.numpy() <= 3),
-                                                     numpy.where(noup_r.numpy() <= 3),
-                                                     numpy.where(noup_c.numpy() <= 0),
-                                                     numpy.where(n.numpy() <= half_window)
-                                                     ),
-                                                    axis=1
-                                                )
-            iv = numpy.unique(ids_for_lin_fit)              # ids sind gescheckt und passen
+            A, data_block, qual_block, noup_c, noup_r, noup_l, iv = additional_stat_info_raster_torch(data_block, qual_block, sg_window, device, half_window, center)
 
             print("iv.shape: ", iv.shape)
             print(iv[:60])
@@ -160,7 +95,7 @@ if __name__ == "__main__":
 
 
             print("Start fitting ...")
-            [a0, a1, a2] = fitq_cpu(data_block, qual_block, A, sg_window)
+            [a0, a1, a2] = fitq_numpy(data_block, qual_block, A, sg_window)
 
             # print("len a0: ", a0.shape)
             # print("len a1: ", a1.shape)
