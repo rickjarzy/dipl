@@ -8,6 +8,8 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
+from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq_numpy
+
 
 
 if __name__ == "__main__":

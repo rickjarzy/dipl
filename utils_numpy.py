@@ -1,4 +1,6 @@
 import numpy
+from osgeo import gdal
+import os
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
 

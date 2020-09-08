@@ -1,5 +1,7 @@
 import torch
 import numpy
+from osgeo import gdal
+import os
 
 # ============ Functionlisting =================================
 def additional_stat_info_raster_torch(data_block, qual_block, sg_window, device, half_window, center):
