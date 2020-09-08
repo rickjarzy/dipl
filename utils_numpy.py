@@ -1,0 +1,262 @@
+import numpy
+
+def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
+
+    """
+    Creates a initial datablock for the modis data and returns a numpy ndim array
+    Parameters
+    ----------
+    sg_window
+    band
+    in_dir_qs
+    in_dir_tf
+    tile
+    list_qual
+    list_data
+    device
+    master_raster_info
+
+    Returns
+    -------
+
+    """
+
+    data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+    qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+
+    #data_block.share_memory_()
+    #qual_block.share_memory_()
+    for i in range(0, sg_window, 1):
+
+        # load qual file
+        try:
+            qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
+
+            print("load qual data for band %d: %s" % (band, list_qual[i]))
+            #qual_band = qual_ras.GetRasterBand(1)
+            qual_block[i, :, :] = qual_ras.ReadAsArray()
+
+            del qual_ras
+        except Exception as ErrorQualRasReading:
+            print("# ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+        # load satellite data
+        try:
+            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+
+            print("load sat data for band %d: %s" % (band, list_data[i]))
+            #data_band = data_ras.GetRasterBand(1)
+            data_block[i, :, :] = data_ras.ReadAsArray()
+
+            del data_ras
+
+        except Exception as ErrorRasterDataReading:
+            print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+
+    return data_block, qual_block
+
+def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
+    """
+    Creates A Matrix and matrizzes that count the number of usefull observation of the time window
+    Parameters
+    ----------
+    data_block
+    qual_block
+    sg_window
+    device
+    half_window
+    center
+
+    Returns
+    -------
+
+    """
+    print("Processing Numpy")
+    print("No Need of Device : ", device)
+
+    A = numpy.ones([sg_window, 3])
+    A[:, 1] = numpy.arange(1, sg_window + 1, 1)
+    A[:, 2] = numpy.arange(1, sg_window + 1, 1)
+    A[:, 2] = A[:, 2] ** 2
+
+    print("A Matrix : \n", A)
+
+    qual_block[qual_block == 0] = 1
+    qual_block[qual_block == 1] = 0.75
+    qual_block[qual_block == 2] = 0.1
+    qual_block[qual_block == 3] = 0.01
+
+    #noup_zero = numpy.zeros(sg_window, qual_block.shape[1], qual_block.shape[2])  # noup = number of used epochs/pixels
+    #noup_ones = numpy.ones(sg_window, qual_block.shape[1], qual_block.shape[2])
+    #print("TYPES noup_zero: {}, noup_ones: {}, qual_block: {}".format(noup_zero.shape, noup_ones.shape, qual_block.shape))
+    noup_array = numpy.where(qual_block == 255, 0, 1)      # exchange NaN Value 255 with 0
+    #del noup_zero, noup_ones
+
+    qual_block[qual_block == 255] = numpy.nan  # set to 0 so in the ausgleich the nan -> zero convertion is not needed
+    #                                                     # nan will be replaced by zeros so this is a shortcut to avoid that transformation
+    data_block[data_block == 32767] = numpy.nan
+
+    # # data ini to count how many data epochs are to the left and to the right of the center epoch etc
+    l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.max(data_block, axis=0)
+    l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.min(data_block, axis=0)
+
+    noup_l = numpy.sum(noup_array[0:center, :, :], axis=0)  # numbers of used epochs on the left side
+    noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0)  # numbers of used epochs on the right side
+    noup_c = noup_array[center]  # numbers of used epochs on the center epoch
+    # noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
+
+    print("\nDim Check for NOUP:")
+    print("\nnoup_l: ", noup_l.shape)
+    print("noup_r: ", noup_r.shape)
+    print("noup_c: ", noup_c.shape)
+
+    n = numpy.sum(noup_array, axis=0)  # count all pixels that are used on the entire sg_window for the least square
+    del noup_array
+    print("n: ", n.shape)
+
+    ids_for_lin_fit = numpy.concatenate(
+                                        (numpy.where(noup_l <= 3),
+                                         numpy.where(noup_r <= 3),
+                                         numpy.where(noup_c <= 0),
+                                         numpy.where(n <= half_window)),
+                                        axis=1)
+    iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
+
+    return A, data_block, qual_block, noup_c, noup_r, noup_l, iv
+
+def fitl(lv, pv, xv):
+
+    """
+    # Linearer Fit, wenn zu wenige Beobachtungen im Zeitfenster vorliegen nach def. Kriterien
+    # Bezeichnungen wie bei fitq
+
+    Parameters
+    ----------
+    lv
+    pv
+    xv
+
+    Returns
+    -------
+
+    """
+
+
+    ax0 = xv ** 0  # schneller im vergleich zu funktion ones da kein gesonderter funktionsaufruf
+    ax1 = xv
+
+    a11 = numpy.nansum(ax0 * pv * ax0, 0)
+    a12 = numpy.nansum(ax0 * pv * ax1, 0)
+    a22 = numpy.nansum(ax1 * pv * ax1, 0)
+
+    det = a11 * a22 - a12 * a12
+
+    ai11 = a22 / det
+    ai12 = -a12 / det
+    ai22 = a11 / det
+
+    vx0 = numpy.nansum(ax0 * pv * lv, 0)
+    vx1 = numpy.nansum(ax1 * pv * lv, 0)
+
+    a0 = ai11 * vx0 + ai12 * vx1
+    a1 = ai12 * vx0 + ai22 * vx1
+
+    return a0, a1
+
+
+def fitq(lv, pv, xv):
+
+    # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
+    # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
+    # pv ... Gewichtsvektor mit  p = 1 fuer MCD43A2 = 0 0.2 bei MCD43A2=1 (bei MODIS) in erster
+    # Iteration, der bei den weiteren Iterationen entsprechend ueberschrieben wird.
+    # xv ... Zeit in day of year. Damit die Integerwerte bei Quadrierung nicht zu groß werden anstatt
+    # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
+    # A [ax0, ax1, ax2] Designmatrix
+    # Formeln aus
+
+    ax0 = xv ** 0  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
+    # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
+    ax1 = xv ** 1  # Vektor Laenge = 15 [1, 2 , 3 , 4 ... 15]
+    ax2 = xv ** 2  # [ 1 , 4 , 9 ... 225]
+
+    # ATPA Normalgleichungsmatrix
+    a11 = numpy.nansum(ax0 * pv * ax0, 0)
+    a12 = numpy.nansum(ax0 * pv * ax1, 0)
+    a13 = numpy.nansum(ax0 * pv * ax2, 0)
+
+    a22 = numpy.nansum(ax1 * pv * ax1, 0)
+    a23 = numpy.nansum(ax1 * pv * ax2, 0)
+    a33 = numpy.nansum(ax2 * pv * ax2, 0)
+
+    # Determinante (ATPA)
+    det = a11 * a22 * a33 + a12 * a23 * a13 \
+          + a13 * a12 * a23 - a13 * a22 * a13 \
+          - a12 * a12 * a33 - a11 * a23 * a23 \
+
+        # Invertierung (ATPA) mit: Quelle xxx mit Zitat
+    # da die Inverse von A symmetrisch ueber die Hauptdiagonale ist, entspricht ai12 = ai21
+    # (ATPA)-1
+    ai11 = (a22 * a33 - a23 * a23) / det
+    ai12 = (a13 * a23 - a12 * a33) / det
+    ai13 = (a12 * a23 - a13 * a22) / det
+    ai22 = (a11 * a33 - a13 * a13) / det
+    ai23 = (a13 * a12 - a11 * a23) / det
+    ai33 = (a11 * a22 - a12 * a12) / det
+
+    # ATPL mit Bezeichnung vx0 fueer Vektor x0 nansum ... fuer nodata-summe
+    vx0 = numpy.nansum(ax0 * pv * lv, 0)
+    vx1 = numpy.nansum(ax1 * pv * lv, 0)
+    vx2 = numpy.nansum(ax2 * pv * lv, 0)
+
+    # Quotienten der quadratischen Gleichung ... bzw. Ergebnis dieser Funktion
+    a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
+    a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
+    a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
+
+    return a0, a1, a2
+
+def fitq_numpy(lv, pv, A, sq_window):
+
+    """
+    Calculate the parameters of a polynome second degree for the handed  savitzky golay window. data is reshaped to speed up the
+    estimation using least square algorithm
+    Parameters
+    ----------
+    lv  numpy ndarray - shape [15,2400,2400] - holding the data from the satellite time series
+    pv  numpy ndarray - shape [15,2400,2400] - holding the quality info from the satellite time series
+    A   numpy array   - shape [15,3]         - design matrix for the least square algorithm
+    sq_window int                            - size of the savitzky golay filter
+
+    Returns list with estimated parameters of shape [5760000,3,1]
+    -------
+
+    """
+
+    print("input lv.shape: ", lv.shape)
+    print("input pv.shape: ", pv.shape)
+    print("lv[15,0,0]:\n", lv[:, 0, 0])
+    print("pv[15,0,0]:\n", pv[:, 0, 0])
+
+    lv = lv.reshape(sq_window, lv.shape[1]*lv.shape[2]).T       # change to (15,5760000) and via transpose to (5760000,15)
+    lv = lv.reshape(lv.shape[0], lv.shape[1], 1)                # change to (5760000,15,1) shape
+    print("reshape: lv[0]: \n", lv[0], "\nshape: ", lv.shape)
+
+    pv = pv.reshape(sq_window, pv.shape[1]*pv.shape[2]).T           # change to (15,5760000) and via transpose to (5760000,15)
+    pv = pv.reshape(pv.shape[0], 1, pv.shape[1])                    # change to (5760000,1,15) shape
+    print("reshape: pv[0]: \n", pv[0], "\nshape: ", pv.shape)
+
+    ATP = numpy.multiply(A.T, pv)
+    del pv
+    print("Numpy - ATP: ", ATP[0].shape)
+    ATPA = numpy.linalg.inv(numpy.dot(ATP, A))
+    print("Numpy - ATPA: ", ATPA.shape)
+
+    ATPL = numpy.matmul(ATP, lv)
+    del lv
+    x_dach = numpy.matmul(ATPA, ATPL)
+    print("x_dach: shape {}".format(x_dach.shape), "\n", x_dach)
+
+    return None, None, None
+
+if __name__ == "__main__":
+    print("Utils Numpy")

@@ -10,9 +10,6 @@ from osgeo import gdalconst
 from multi_fit_single_utils import *
 
 
-
-
-
 if __name__ == "__main__":
 
     start = time.time()
@@ -36,14 +33,25 @@ if __name__ == "__main__":
         in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
+
+
     else:
         print("Check Data Drive Letter !!!!!")
 
-    if os.name == "posix":
+    if os.name == "posix" and socket.gethostname() == "paul-buero":
+
         in_dir_qs = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A2"
         in_dir_tf = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A4"
         out_dir_fit = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6"
 
+    elif os.name == "posix" and socket.gethostname() in ["iotmaster", "iotslave1", "iotslave2"]:
+        in_dir_qs = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A2"
+        in_dir_tf = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A4"
+        out_dir_fit = r"/home/iot/scripts/dev/projects/timeseries/data/v6/fitted"
+    else:
+        in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
+        in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
+        out_dir_fit = r"E:\MODIS_Data\v6\fitted"
 
 
     # kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
@@ -80,15 +88,15 @@ if __name__ == "__main__":
             # Initialize data fiting -load satellite data into data blocks
             # ============================================================
 
-            data_block, qual_block = init_data_block_torch(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
+            data_block, qual_block = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info)
 
 
             data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
 
-            A, data_block, qual_block, noup_c, noup_r, noup_l, iv = additional_stat_info_raster_torch(data_block, qual_block, sg_window, device, half_window, center)
+            A, data_block, qual_block, noup_c, noup_r, noup_l, iv = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
             print("iv.shape: ", iv.shape)
-            print(iv[:60])
+            print(iv[:200])
 
             #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
             #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
