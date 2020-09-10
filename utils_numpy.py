@@ -257,7 +257,8 @@ def fitq_numpy(lv, pv, A, sq_window):
     del lv
     x_dach = numpy.matmul(ATPA, ATPL)
     print("x_dach: shape {}".format(x_dach.shape), "\n", x_dach)
-
+    print("a0: ", x_dach[0,0,1])
+    print("")
     return None, None, None
 
 if __name__ == "__main__":
