@@ -165,7 +165,7 @@ def fitl(lv, pv, xv):
     return a0, a1
 
 
-def fitq(lv, pv, xv):
+def fitq(lv, pv, xv, sg_window):
 
     # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
     # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
@@ -175,6 +175,14 @@ def fitq(lv, pv, xv):
     # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
     # A [ax0, ax1, ax2] Designmatrix
     # Formeln aus
+    print("Start FitQ ...")
+    lv = lv.reshape(lv.shape[0], lv.shape[1] * lv.shape[2])
+    pv = pv.reshape(pv.shape[0], pv.shape[1] * pv.shape[2])
+    xv = xv[:, 1].reshape(sg_window, 1)
+
+    print("- lv.shape : ", lv.shape)
+    print("- pv.shape : ", pv.shape)
+    print("- xv.shape : ", xv.shape)
 
     ax0 = xv ** 0  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
     # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
@@ -214,8 +222,17 @@ def fitq(lv, pv, xv):
     a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
     a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
     a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
+    print("- shape a0: ", a0.shape)
+    print("- shape a1: ", a1.shape)
+    print("- shape a2: ", a2.shape)
 
-    return a0, a1, a2
+    fit = numpy.round(a0 + a1*xv + a2*(xv**2))
+
+    delta_lv = abs(fit - lv)
+    delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
+    sig = numpy.nansum(delta_lv,0)
+    print("SIG.shape. ", sig.shape)
+    return fit.reshape(sg_window, 2400,2400), sig.reshape(2400, 2400)
 
 def fitq_numpy(lv, pv, A, sq_window):
 
@@ -257,7 +274,7 @@ def fitq_numpy(lv, pv, A, sq_window):
     del lv
     x_dach = numpy.matmul(ATPA, ATPL)
     print("x_dach: shape {}".format(x_dach.shape), "\n", x_dach)
-    print("a0: ", x_dach[0,0,1])
+    print("a0: ", x_dach[0,0,0])
     print("")
     return None, None, None
 

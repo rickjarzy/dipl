@@ -8,7 +8,7 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq_numpy
+from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq_numpy, fitq
 
 
 
@@ -60,11 +60,11 @@ if __name__ == "__main__":
     bands = list(range(1,8,1))
     print(bands)
     sg_window = 15
-    window_arr = torch.arange(0,sg_window,1)       # range from 0 to sg_window
-    fit_nr = torch.median(window_arr)               # just a tensor fomr 0 to sg_window
-    center = torch.median(window_arr)               # center index of the data stack
-    sigm = torch.ones(sg_window, 2400*2400)
-    half_window = numpy.floor(sg_window/2)
+    window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
+    fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
+    center = int(numpy.median(window_arr))               # center index of the data stack
+    sigm = numpy.ones((sg_window, 2400,2400))
+    half_window = int(numpy.floor(sg_window/2))
 
 
 
@@ -104,56 +104,19 @@ if __name__ == "__main__":
 
 
             print("Start fitting ...")
-            [a0, a1, a2] = fitq_numpy(data_block, qual_block, A, sg_window)
+            #[a0, a1, a2] = fitq_numpy(data_block, qual_block, A, sg_window)
+            [fit, sig]= fitq(data_block, qual_block, A, sg_window)
+            print("fit.shape: ", fit.shape)
 
-            # print("len a0: ", a0.shape)
-            # print("len a1: ", a1.shape)
-            # print("len a2: ", a2.shape)
-            #
-            # # ------------------------------------------
-            # # Logic for empty or not enought data spots
-            # # ymin, ymax etc
-            # # ------------------------------------------
-            # print("calc new raster matrix ... ")
+            delta_lv = abs(fit - data_block)
+            delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
+            print("delta_lv.shape: ", delta_lv.shape)
+            sigm = sigm * sig
 
-            # # fit the data
-            # # A.shape = [15,1]
-            # # a0.shape = [57600000]
-            # fit = torch.round(a0 + a1 * torch.reshape(A[:,1], (sg_window, 1)) + a2 * torch.reshape(A[:,2], (sg_window, 1)))      # fit.shape: [15,5_760_000])
-            # fit[fit != fit] = 0                             # set nan to 0
-            # print("fited layer")
-            # print(fit[center, :])
-            #
-            # # calc new weights
-            # delta_lv = torch.abs(fit - data_block)          # delta_lv.shape: [15,5_760_000]
-            # delta_lv[delta_lv != delta_lv] = 0              # set nan to 0
-            # sigm = torch.ones(2400 ** 2, sg_window, 1)
-            # print("delta_lv: ")
-            # print(delta_lv)
-            # delta_lv[delta_lv<1] = 1                        #
-            # sig = torch.sum(delta_lv, 0)                     # sig.shape: [5_760_000]
-            # print("sig")
-            # print(sig)
-            # sigm = sigm * sig                               # sigm.shape: [15, 5_760_000]
-            #
-            # print("sigm")
-            # print(sigm)
-            #
-            # qual_updated = sigm/delta_lv                    # qual_updated.shape: [15, 5_760_000]
-            #
-            # print("calc new raster matrix - 2nd iteration ...")
-            # [a0, a1, a2] = fitq_cpu(data_block, qual_updated, A, sg_window)
-            # fit = torch.round(a0 + a1 * torch.reshape(A[:, 1], (sg_window, 1)) + a2 * torch.reshape(A[:, 2], (sg_window, 1)))
-            # print("fited layer")
-            # print(fit[center, :])
-            #
-            # #linear fit
-            # [a0,a1] = fitl_cuda(fit[:,iv], qual_updated[:,iv], A[:, 1], sg_window)
-            # fit[:,iv] = torch.round(a0 + a1*torch.reshape(A[:, 1], (sg_window, 1)))
-            #
-            # #check if fit is bigger than max occouring values
-            # fit = torch.where(fit>l_max, l_max, fit)
-            # fit = torch.where(fit<l_min, l_min, fit)
+            qual_block_nu = sigm/delta_lv
+            print("Type qual_block: ", type(qual_block_nu))
+            [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
             #
             # # filtered epoch
             # fit_layer = torch.reshape(fit[fit_nr], (2400,2400)).numpy()
