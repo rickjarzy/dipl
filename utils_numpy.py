@@ -114,7 +114,10 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     n = numpy.sum(noup_array, axis=0)  # count all pixels that are used on the entire sg_window for the least square
     del noup_array
     print("n: ", n.shape)
-
+    print("Numbers of Observations check R: ", noup_r[:4, :4])
+    print("Numbers of Observations check L: ", noup_l[:4, :4])
+    print("Numbers of Observations check C: ", noup_c[:4, :4])
+    print("Numbers of Observations check N: ", n[:4, :4])
     ids_for_lin_fit = numpy.concatenate(
                                         (numpy.where(noup_l <= 3),
                                          numpy.where(noup_r <= 3),

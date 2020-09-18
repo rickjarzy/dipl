@@ -98,7 +98,6 @@ if __name__ == "__main__":
 
             print("iv.shape: ", iv.shape)
             print(iv[:200])
-
             #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
             #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
@@ -116,6 +115,8 @@ if __name__ == "__main__":
             qual_block_nu = sigm/delta_lv
             print("Type qual_block: ", type(qual_block_nu))
             [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+            print("\n IV: ", iv)
 
             #
             # # filtered epoch
