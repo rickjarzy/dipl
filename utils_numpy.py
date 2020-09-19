@@ -2,7 +2,7 @@ import numpy
 from osgeo import gdal
 import os
 
-def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info):
+def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr):
 
     """
     Creates a initial datablock for the modis data and returns a numpy ndim array
@@ -34,7 +34,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
         try:
             qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
 
-            print("load qual data for band %d: %s" % (band, list_qual[i]))
+            #print("load qual data for band %d: %s" % (band, list_qual[i]))
             #qual_band = qual_ras.GetRasterBand(1)
             qual_block[i, :, :] = qual_ras.ReadAsArray()
 
@@ -49,12 +49,19 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = data_ras.ReadAsArray()
 
+            # collect epochs raster name
+            if fit_nr == i:
+                print("\nName of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
+
+                fitted_raster_band_name = list_data[i][:-4] + ".poly_%s.tif" % str(sg_window)
+
+
             del data_ras
 
         except Exception as ErrorRasterDataReading:
             print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
-    return data_block, qual_block
+    return data_block, qual_block, fitted_raster_band_name
 
 def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
     """
@@ -101,6 +108,10 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.max(data_block, axis=0)
     l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.min(data_block, axis=0)
 
+    #reshape to (15,5760000)
+    l_max = l_max.reshape(sg_window, l_max.shape[1]*l_max.shape[2])
+    l_min = l_min.reshape(sg_window, l_min.shape[1] * l_min.shape[2])
+
     noup_l = numpy.sum(noup_array[0:center, :, :], axis=0)  # numbers of used epochs on the left side
     noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0)  # numbers of used epochs on the right side
     noup_c = noup_array[center]  # numbers of used epochs on the center epoch
@@ -114,10 +125,16 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     n = numpy.sum(noup_array, axis=0)  # count all pixels that are used on the entire sg_window for the least square
     del noup_array
     print("n: ", n.shape)
-    print("Numbers of Observations check R: ", noup_r[:4, :4])
-    print("Numbers of Observations check L: ", noup_l[:4, :4])
-    print("Numbers of Observations check C: ", noup_c[:4, :4])
-    print("Numbers of Observations check N: ", n[:4, :4])
+    print("Numbers of Observations check R: \n", noup_r[:4, :4])
+    print("Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
+    print("Numbers of Observations check L: \n", noup_l[:4, :4])
+    print("Min {} - Max {} - Median {}".format(noup_l.min(), noup_l.max(), numpy.nanmedian(noup_l)))
+    print("Numbers of Observations check C: \n", noup_c[:4, :4])
+    print("Min {} - Max {} - Median {}".format(noup_c.min(), noup_c.max(), numpy.nanmedian(noup_c)))
+    print("Numbers of Observations check N: \n", n[:4, :4])
+    print("Min {} - Max {} - Median {}".format(n.min(), n.max(), numpy.nanmedian(n)))
+
+
     ids_for_lin_fit = numpy.concatenate(
                                         (numpy.where(noup_l <= 3),
                                          numpy.where(noup_r <= 3),
@@ -126,9 +143,9 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
                                         axis=1)
     iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
 
-    return A, data_block, qual_block, noup_c, noup_r, noup_l, iv
+    return A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min
 
-def fitl(lv, pv, xv):
+def fitl(lv, pv, xv, sg_window, iv, l_max, l_min):
 
     """
     # Linearer Fit, wenn zu wenige Beobachtungen im Zeitfenster vorliegen nach def. Kriterien
@@ -144,7 +161,19 @@ def fitl(lv, pv, xv):
     -------
 
     """
+    print("Start FitL ...")
 
+    lv = lv.reshape(lv.shape[0], lv.shape[1] * lv.shape[2])
+    fit = lv
+    pv = pv.reshape(pv.shape[0], pv.shape[1] * pv.shape[2])
+    xv = xv[:, 1].reshape(sg_window, 1)
+
+    lv = lv[:, iv]
+    pv = pv[:, iv]
+
+    print("- lv.shape : ", lv.shape)
+    print("- pv.shape : ", pv.shape)
+    print("- xv.shape : ", xv.shape)
 
     ax0 = xv ** 0  # schneller im vergleich zu funktion ones da kein gesonderter funktionsaufruf
     ax1 = xv
@@ -165,7 +194,12 @@ def fitl(lv, pv, xv):
     a0 = ai11 * vx0 + ai12 * vx1
     a1 = ai12 * vx0 + ai22 * vx1
 
-    return a0, a1
+    fit[:, iv] = numpy.round(a0 * a1 * xv)
+
+    # fit = numpy.where(fit > l_max, l_max, fit)
+    # fit = numpy.where(fit < l_max, l_min, fit)
+
+    return fit.reshape(sg_window, 2400,2400)
 
 
 def fitq(lv, pv, xv, sg_window):
