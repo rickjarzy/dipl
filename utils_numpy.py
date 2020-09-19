@@ -1,5 +1,5 @@
 import numpy
-from osgeo import gdal
+from osgeo import gdal, gdalconst
 import os
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr):
@@ -165,7 +165,7 @@ def write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band
     # write output raster
     print("- Fitlayer stats: ", fit_layer.shape)
     out_ras_name = os.path.join(out_dir_fit, tile, fitted_raster_band_name)
-    print("- outdir: ", out_ras_name)
+    print("- Writing file : ", out_ras_name)
 
     # master_raster_info[-1] holds the driver for the file to create
     out_ras = master_raster_info[-1].Create(out_ras_name, master_raster_info[2], master_raster_info[3], 1,
