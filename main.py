@@ -9,7 +9,7 @@ from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
 from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq_numpy, fitq, fitl
-
+import fit_config
 
 
 if __name__ == "__main__":
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     # kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
     tile = "h18v04"
-    bands = list(range(1,8,1))
+    bands = fit_config              #list(range(1,8,1))
     print(bands)
     sg_window = 15
     window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
