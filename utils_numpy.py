@@ -63,7 +63,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
 
     return data_block, qual_block, fitted_raster_band_name
 
-def update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, ts):
+def update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts):
 
     #update datablock
     data_block[0:-1, :, :] = data_block[1:, :, :]
@@ -75,7 +75,9 @@ def update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, 
     print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts])
     qual_block[sg_window-1, :, :] = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
 
-    return data_block, qual_block
+    fitted_raster_band_name = list_data[fit_nr + ts]
+
+    return data_block, qual_block, fitted_raster_band_name
 
 def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
     """

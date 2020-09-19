@@ -158,11 +158,60 @@ if __name__ == "__main__":
                 else:
                     try:
                         # update data and qual information
-                        data_block, qual_block = update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, ts)
+                        data_block, qual_block, fitted_raster_band_name = update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts)
 
                         A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
+                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (
+                        fitted_raster_band_name, ts + 1, len_list_data))
 
+                        [fit, sig] = fitq(data_block, qual_block, A, sg_window)
+
+                        print("- fit.shape: ", fit.shape)
+                        print("- iv.shape: ", iv.shape)
+
+                        delta_lv = abs(fit - data_block)
+                        delta_lv = numpy.where(delta_lv < 1, 1, delta_lv)
+
+                        print("- delta_lv.shape: ", delta_lv.shape)
+
+                        sigm = sigm * sig
+                        qual_block_nu = sigm / delta_lv
+
+                        # check if min or max values are overshooting
+                        print("- l_max: ", l_max[:, 1, 1])
+                        print("- l_min: ", l_min[:, 1, 1])
+
+                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+                        delta_lv = abs(fit - data_block)
+                        delta_lv = numpy.where(delta_lv < 1, 1, delta_lv)
+                        print("- delta_lv.shape: ", delta_lv.shape)
+                        sigm = sigm * sig
+
+                        qual_block_nu = sigm / delta_lv
+
+                        # check if min or max values are overshooting
+                        print("- l_max: ", l_max[:, 1, 1])
+                        print("- l_min: ", l_min[:, 1, 1])
+
+                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+                        print("\nStart fitting linear ...")
+
+                        fit = fitl(fit, qual_block_nu, A, sg_window, iv)
+
+                        fit = numpy.where(fit > l_max, l_max, fit)
+                        fit = numpy.where(fit < l_min, l_min, fit)
+
+                        # # filtered epoch
+                        fit_layer = fit[fit_nr]
+
+                        # write output raster
+                        write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name,
+                                                    master_raster_info)
+
+                        sigm = sigm ** 0  # set back to ones
 
                     except Exception as BrokenFurtherIteration:
                         print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
