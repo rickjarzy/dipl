@@ -87,7 +87,7 @@ if __name__ == "__main__":
         else:
 
             for ts in range(0,len_list_data,1):
-
+                epoch_start = time.time()
                 if ts == 0:
                     try:
                         # Initialize data fiting -load satellite data into data blocks
@@ -150,6 +150,7 @@ if __name__ == "__main__":
                         write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
                         sigm = sigm ** 0            # set back to ones
+                        print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]")
 
                     except Exception as BrokenFirstIteration:
                         print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
@@ -212,7 +213,7 @@ if __name__ == "__main__":
                                                     master_raster_info)
 
                         sigm = sigm ** 0  # set back to ones
-
+                        print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]")
                     except Exception as BrokenFurtherIteration:
                         print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
 
