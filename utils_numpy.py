@@ -103,18 +103,12 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     A[:, 2] = numpy.arange(1, sg_window + 1, 1)
     A[:, 2] = A[:, 2] ** 2
 
-    print("# A Matrix : \n", A)
-
     qual_block[qual_block == 0] = 1
     qual_block[qual_block == 1] = 0.75
     qual_block[qual_block == 2] = 0.1
     qual_block[qual_block == 3] = 0.01
 
-    #noup_zero = numpy.zeros(sg_window, qual_block.shape[1], qual_block.shape[2])  # noup = number of used epochs/pixels
-    #noup_ones = numpy.ones(sg_window, qual_block.shape[1], qual_block.shape[2])
-    #print("TYPES noup_zero: {}, noup_ones: {}, qual_block: {}".format(noup_zero.shape, noup_ones.shape, qual_block.shape))
     noup_array = numpy.where(qual_block == 255, 0, 1)      # exchange NaN Value 255 with 0
-    #del noup_zero, noup_ones
 
     qual_block[qual_block == 255] = numpy.nan  # set to 0 so in the ausgleich the nan -> zero convertion is not needed
     #                                                     # nan will be replaced by zeros so this is a shortcut to avoid that transformation
@@ -130,7 +124,7 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     noup_l = numpy.sum(noup_array[0:center, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the left side
     noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the right side
     noup_c = noup_array[center].reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the center epoch
-    # noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
+
 
     print("\n# Dim Check for NOUP:")
     print("\n# noup_l: ", noup_l.shape)
@@ -158,7 +152,7 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
                                         axis=1)
     iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
     print("# IV.shape: ", iv.shape)
-    return A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min
+    return A, data_block, qual_block, iv, l_max, l_min
 
 def write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info):
 
@@ -302,7 +296,7 @@ def fitq(lv, pv, xv, sg_window):
     delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
     sig = numpy.nansum(delta_lv,0)
     print("# SIG.shape. ", sig.shape)
-    return fit.reshape(sg_window, 2400,2400), sig.reshape(2400, 2400)
+    return fit.reshape(sg_window, 2400,2400), sig.reshape(2400, 2400), delta_lv.reshape(sg_window, 2400,2400)
 
 def fitq_numpy(lv, pv, A, sq_window):
 

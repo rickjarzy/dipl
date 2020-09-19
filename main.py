@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
                         data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr)
 
-                        A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
+                        A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
 
                         #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
@@ -104,14 +104,11 @@ if __name__ == "__main__":
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
 
-                        [fit, sig]= fitq(data_block, qual_block, A, sg_window)
+                        [fit, sig, delta_lv]= fitq(data_block, qual_block, A, sg_window)
 
                         print("- fit.shape: ", fit.shape)
                         print("- iv.shape: ", iv.shape)
 
-                        delta_lv = abs(fit - data_block)
-                        delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
-
                         print("- delta_lv.shape: ", delta_lv.shape)
 
                         sigm = sigm * sig
@@ -121,11 +118,8 @@ if __name__ == "__main__":
                         print("- l_max: ", l_max[:, 1, 1])
                         print("- l_min: ", l_min[:, 1, 1])
 
-                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
-                        delta_lv = abs(fit - data_block)
-                        delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
-                        print("- delta_lv.shape: ", delta_lv.shape)
                         sigm = sigm * sig
 
                         qual_block_nu = sigm/delta_lv
@@ -134,7 +128,7 @@ if __name__ == "__main__":
                         print("- l_max: ", l_max[:, 1, 1])
                         print("- l_min: ", l_min[:, 1, 1])
 
-                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
                         print("\nStart fitting linear ...")
 
@@ -150,10 +144,13 @@ if __name__ == "__main__":
                         write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
                         sigm = sigm ** 0            # set back to ones
+                        del delta_lv
                         print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]")
-
                     except Exception as BrokenFirstIteration:
-                        print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
+                        print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
+                        break
+                    except KeyboardInterrupt:
+                        print("### PROGRAMM ENDED BY USER")
 
 
                 else:
@@ -161,20 +158,16 @@ if __name__ == "__main__":
                         # update data and qual information
                         data_block, qual_block, fitted_raster_band_name = update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts)
 
-                        A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
+                        A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (
                         fitted_raster_band_name, ts + 1, len_list_data))
 
-                        [fit, sig] = fitq(data_block, qual_block, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
                         print("- fit.shape: ", fit.shape)
                         print("- iv.shape: ", iv.shape)
 
-                        delta_lv = abs(fit - data_block)
-                        delta_lv = numpy.where(delta_lv < 1, 1, delta_lv)
-
-                        print("- delta_lv.shape: ", delta_lv.shape)
 
                         sigm = sigm * sig
                         qual_block_nu = sigm / delta_lv
@@ -183,20 +176,16 @@ if __name__ == "__main__":
                         print("- l_max: ", l_max[:, 1, 1])
                         print("- l_min: ", l_min[:, 1, 1])
 
-                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
-                        delta_lv = abs(fit - data_block)
-                        delta_lv = numpy.where(delta_lv < 1, 1, delta_lv)
-                        print("- delta_lv.shape: ", delta_lv.shape)
                         sigm = sigm * sig
-
                         qual_block_nu = sigm / delta_lv
 
                         # check if min or max values are overshooting
                         print("- l_max: ", l_max[:, 1, 1])
                         print("- l_min: ", l_min[:, 1, 1])
 
-                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
                         print("\nStart fitting linear ...")
 
@@ -213,16 +202,13 @@ if __name__ == "__main__":
                                                     master_raster_info)
 
                         sigm = sigm ** 0  # set back to ones
+                        del delta_lv
                         print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]")
                     except Exception as BrokenFurtherIteration:
-                        print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
-
-
-
-
-
-
-
+                        print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
+                        break
+                    except KeyboardInterrupt:
+                        print("### PROGRAMM ENDED BY USER")
 
 
     print("elapsed time: ", time.time() - start , " [sec]")
