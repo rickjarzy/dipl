@@ -45,13 +45,13 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
         try:
             data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
 
-            print("load sat data for band %d: %s" % (band, list_data[i]))
+            print("# load sat data for band %d: %s" % (band, list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = data_ras.ReadAsArray()
 
             # collect epochs raster name
             if fit_nr == i:
-                print("\nName of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
+                print("\n# Name of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
 
                 fitted_raster_band_name = list_data[i][:-4] + ".poly_%s.tif" % str(sg_window)
 
@@ -62,6 +62,20 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
             print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
     return data_block, qual_block, fitted_raster_band_name
+
+def update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, ts):
+
+    #update datablock
+    data_block[0:-1, :, :] = data_block[1:, :, :]
+    print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
+    data_block[sg_window-1, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
+
+    #update qualblock
+    qual_block[0:-1, :, :] = qual_block[1:, :, :]
+    print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts])
+    qual_block[sg_window-1, :, :] = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
+
+    return data_block, qual_block
 
 def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
     """
@@ -79,15 +93,15 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     -------
 
     """
-    print("Processing Numpy")
-    print("No Need of Device : ", device)
+    print("# Processing Numpy")
+    print("# No Need of Device : ", device)
 
     A = numpy.ones([sg_window, 3])
     A[:, 1] = numpy.arange(1, sg_window + 1, 1)
     A[:, 2] = numpy.arange(1, sg_window + 1, 1)
     A[:, 2] = A[:, 2] ** 2
 
-    print("A Matrix : \n", A)
+    print("# A Matrix : \n", A)
 
     qual_block[qual_block == 0] = 1
     qual_block[qual_block == 1] = 0.75
@@ -108,30 +122,30 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmax(data_block, axis=0)
     l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmin(data_block, axis=0)
 
-    print("l max: ", numpy.nanmax(l_max))
-    print("l min: ", numpy.nanmin(l_min))
+    print("# l max: ", numpy.nanmax(l_max))
+    print("# l min: ", numpy.nanmin(l_min))
 
     noup_l = numpy.sum(noup_array[0:center, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the left side
     noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the right side
     noup_c = noup_array[center].reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the center epoch
     # noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
 
-    print("\nDim Check for NOUP:")
-    print("\nnoup_l: ", noup_l.shape)
-    print("noup_r: ", noup_r.shape)
-    print("noup_c: ", noup_c.shape)
+    print("\n# Dim Check for NOUP:")
+    print("\n# noup_l: ", noup_l.shape)
+    print("# noup_r: ", noup_r.shape)
+    print("# noup_c: ", noup_c.shape)
 
     n = numpy.sum(noup_array, axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # count all pixels that are used on the entire sg_window for the least square
     del noup_array
-    print("n: ", n.shape)
-    print("Numbers of Observations check R: \n", noup_r[:4])
-    print("Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
-    print("Numbers of Observations check L: \n", noup_l[:4])
-    print("Min {} - Max {} - Median {}".format(noup_l.min(), noup_l.max(), numpy.nanmedian(noup_l)))
-    print("Numbers of Observations check C: \n", noup_c[:4])
-    print("Min {} - Max {} - Median {}".format(noup_c.min(), noup_c.max(), numpy.nanmedian(noup_c)))
-    print("Numbers of Observations check N: \n", n[:4])
-    print("Min {} - Max {} - Median {}".format(n.min(), n.max(), numpy.nanmedian(n)))
+    print("# n: ", n.shape)
+    print("# Numbers of Observations check R: \n", noup_r[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
+    print("# Numbers of Observations check L: \n", noup_l[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_l.min(), noup_l.max(), numpy.nanmedian(noup_l)))
+    print("# Numbers of Observations check C: \n", noup_c[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_c.min(), noup_c.max(), numpy.nanmedian(noup_c)))
+    print("# Numbers of Observations check N: \n", n[:4])
+    print("# Min {} - Max {} - Median {}".format(n.min(), n.max(), numpy.nanmedian(n)))
 
 
     ids_for_lin_fit = numpy.concatenate(
@@ -141,8 +155,26 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
                                          numpy.where(n <= half_window)),
                                         axis=1)
     iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
-    print("IV.shape: ", iv.shape)
+    print("# IV.shape: ", iv.shape)
     return A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min
+
+def write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info):
+
+    # write output raster
+    print("- Fitlayer stats: ", fit_layer.shape)
+    out_ras_name = os.path.join(out_dir_fit, tile, fitted_raster_band_name)
+    print("- outdir: ", out_ras_name)
+
+    # master_raster_info[-1] holds the driver for the file to create
+    out_ras = master_raster_info[-1].Create(out_ras_name, master_raster_info[2], master_raster_info[3], 1,
+                                            gdalconst.GDT_Int16, options=['COMPRESS=LZW'])
+    out_band = out_ras.GetRasterBand(1)
+    out_band.WriteArray(fit_layer)
+    out_band.SetNoDataValue(32767)
+    out_ras.SetGeoTransform(master_raster_info[0])
+    out_ras.SetProjection(master_raster_info[1])
+    out_ras.FlushCache()
+    del out_ras, out_band, out_ras_name
 
 def fitl(lv, pv, xv, sg_window, iv):
 
@@ -160,7 +192,7 @@ def fitl(lv, pv, xv, sg_window, iv):
     -------
 
     """
-    print("Start FitL ...")
+    print("# Start Fit Linear ...")
 
     lv = lv.reshape(lv.shape[0], lv.shape[1] * lv.shape[2])
     fit = lv
@@ -170,9 +202,9 @@ def fitl(lv, pv, xv, sg_window, iv):
     lv = lv[:, iv]
     pv = pv[:, iv]
 
-    print("- lv.shape : ", lv.shape)
-    print("- pv.shape : ", pv.shape)
-    print("- xv.shape : ", xv.shape)
+    print("# lv.shape : ", lv.shape)
+    print("# pv.shape : ", pv.shape)
+    print("# xv.shape : ", xv.shape)
 
     ax0 = xv ** 0  # schneller im vergleich zu funktion ones da kein gesonderter funktionsaufruf
     ax1 = xv
@@ -193,8 +225,8 @@ def fitl(lv, pv, xv, sg_window, iv):
     a0 = ai11 * vx0 + ai12 * vx1
     a1 = ai12 * vx0 + ai22 * vx1
 
-    print("- shape a0: ", a0.shape)
-    print("- shape a1: ", a1.shape)
+    print("# shape a0: ", a0.shape)
+    print("# shape a1: ", a1.shape)
 
     fit[:, iv] = numpy.round(a0 * a1 * xv)
 
@@ -211,14 +243,14 @@ def fitq(lv, pv, xv, sg_window):
     # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
     # A [ax0, ax1, ax2] Designmatrix
     # Formeln aus
-    print("Start FitQ ...")
+    print("# Start Fit Polynom ...")
     lv = lv.reshape(lv.shape[0], lv.shape[1] * lv.shape[2])
     pv = pv.reshape(pv.shape[0], pv.shape[1] * pv.shape[2])
     xv = xv[:, 1].reshape(sg_window, 1)
 
-    print("- lv.shape : ", lv.shape)
-    print("- pv.shape : ", pv.shape)
-    print("- xv.shape : ", xv.shape)
+    print("# lv.shape : ", lv.shape)
+    print("# pv.shape : ", pv.shape)
+    print("# xv.shape : ", xv.shape)
 
     ax0 = xv ** 0  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
     # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
@@ -258,16 +290,16 @@ def fitq(lv, pv, xv, sg_window):
     a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
     a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
     a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
-    print("- shape a0: ", a0.shape)
-    print("- shape a1: ", a1.shape)
-    print("- shape a2: ", a2.shape)
+    print("# shape a0: ", a0.shape)
+    print("# shape a1: ", a1.shape)
+    print("# shape a2: ", a2.shape)
 
     fit = numpy.round(a0 + a1*xv + a2*(xv**2))
 
     delta_lv = abs(fit - lv)
     delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
     sig = numpy.nansum(delta_lv,0)
-    print("SIG.shape. ", sig.shape)
+    print("# SIG.shape. ", sig.shape)
     return fit.reshape(sg_window, 2400,2400), sig.reshape(2400, 2400)
 
 def fitq_numpy(lv, pv, A, sq_window):

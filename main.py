@@ -8,7 +8,7 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq_numpy, fitq, fitl
+from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy, write_fitted_raster_to_disk
 import fit_config
 
 
@@ -76,8 +76,8 @@ if __name__ == "__main__":
 
         os.chdir(os.path.join(in_dir_tf, tile))
         list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))
-
-
+        len_list_data = len(list_data)
+        # check if qual and sat data have the same amount of files
         if int(len(list_qual)) != int(len(list_data)):
             print("Len list_qual: ", len(list_qual))
             print("Len list_data: ", len(list_data))
@@ -86,110 +86,93 @@ if __name__ == "__main__":
 
         else:
 
-            # Initialize data fiting -load satellite data into data blocks
-            # ============================================================
+            for ts in range(0,len_list_data,1):
 
-            data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr)
+                if ts == 0:
+                    try:
+                        # Initialize data fiting -load satellite data into data blocks
+                        # ============================================================
 
+                        data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr)
 
-            data_block_indizes = [[index for index in range(i, i+300, 1)] for i in range(0, 2400, 300)]
-
-            A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
-
-            print("iv.shape: ", iv.shape)
-            print(iv[:200])
-            #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-            #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
+                        A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
 
-            print("Start fitting ...")
-            #[a0, a1, a2] = fitq_numpy(data_block, qual_block, A, sg_window)
-            [fit, sig]= fitq(data_block, qual_block, A, sg_window)
-            print("fit.shape: ", fit.shape)
-
-            delta_lv = abs(fit - data_block)
-            delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
-            print("delta_lv.shape: ", delta_lv.shape)
-            sigm = sigm * sig
-
-            qual_block_nu = sigm/delta_lv
-            print("Type qual_block: ", type(qual_block_nu))
-
-            # check if min or max values are overshooting
-            print("l_max: ", l_max[:, 1, 1])
-            print("l_min: ", l_min[:, 1, 1])
-
-            [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
-
-            delta_lv = abs(fit - data_block)
-            delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
-            print("delta_lv.shape: ", delta_lv.shape)
-            sigm = sigm * sig
-
-            qual_block_nu = sigm/delta_lv
-            print("Type qual_block: ", type(qual_block_nu))
-
-            # check if min or max values are overshooting
-            print("l_max: ", l_max[:, 1, 1])
-            print("l_min: ", l_min[:, 1, 1])
-
-            [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+                        #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
+                        #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
 
+                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
+
+                        [fit, sig]= fitq(data_block, qual_block, A, sg_window)
+
+                        print("- fit.shape: ", fit.shape)
+                        print("- iv.shape: ", iv.shape)
+
+                        delta_lv = abs(fit - data_block)
+                        delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
+
+                        print("- delta_lv.shape: ", delta_lv.shape)
+
+                        sigm = sigm * sig
+                        qual_block_nu = sigm/delta_lv
+
+                        # check if min or max values are overshooting
+                        print("- l_max: ", l_max[:, 1, 1])
+                        print("- l_min: ", l_min[:, 1, 1])
+
+                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+                        delta_lv = abs(fit - data_block)
+                        delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
+                        print("- delta_lv.shape: ", delta_lv.shape)
+                        sigm = sigm * sig
+
+                        qual_block_nu = sigm/delta_lv
+
+                        # check if min or max values are overshooting
+                        print("- l_max: ", l_max[:, 1, 1])
+                        print("- l_min: ", l_min[:, 1, 1])
+
+                        [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+                        print("\nStart fitting linear ...")
+
+                        fit = fitl(fit, qual_block_nu, A, sg_window, iv)
+
+                        fit = numpy.where(fit > l_max, l_max, fit)
+                        fit = numpy.where(fit < l_min, l_min, fit)
+
+                        # # filtered epoch
+                        fit_layer = fit[fit_nr]
+
+                        # write output raster
+                        write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+
+                        sigm = sigm ** 0            # set back to ones
+
+                    except Exception as BrokenFirstIteration:
+                        print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
 
 
-            print("Start fitting linear ...")
+                else:
+                    try:
+                        # update data and qual information
+                        data_block, qual_block = update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, ts)
 
-            fit = fitl(fit, qual_block_nu, A, sg_window, iv)
+                        A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
-            fit = numpy.where(fit > l_max, l_max, fit)
-            fit = numpy.where(fit < l_min, l_min, fit)
 
-            # # filtered epoch
-            fit_layer = fit[fit_nr]
 
-            # write output raster
-            print("Fitlayer stats: ", fit_layer.shape)
-            out_ras_name = os.path.join(out_dir_fit,tile,fitted_raster_band_name)
-            print("outdir: ", out_ras_name)
+                    except Exception as BrokenFurtherIteration:
+                        print("### ERROR - Something went wrong in the first iteration \n    - {}".format(BrokenFirstIteration))
 
-            # master_raster_info[-1] holds the driver for the file to create
-            out_ras = master_raster_info[-1].Create(out_ras_name, master_raster_info[2], master_raster_info[3], 1, gdalconst.GDT_Int16, options = [ 'COMPRESS=LZW' ])
-            out_band = out_ras.GetRasterBand(1)
-            out_band.WriteArray(fit_layer)
-            out_band.SetNoDataValue(32767)
-            out_ras.SetGeoTransform(master_raster_info[0])
-            out_ras.SetProjection(master_raster_info[1])
-            out_ras.FlushCache()
-            del out_ras
 
-            break
-            ##test = [data_block[:, i, :] for i in data_block_indizes]
 
-            #return_test_liste = multi_fit_gpu(data_block, qual_block, data_block_indizes)
 
-            # END of Initializing
-            # ===============================================================
 
-            # START FITTING
-            # ===============================================================
 
-            # numbers_of_data_epochs = len(list_data)
-            #
-            # for i in range(0,len(list_qual),1):
-            #     window_end_index = i + sg_window
-            #     if window_end_index < numbers_of_data_epochs:
-            #
-            #         names_of_interrest_window = list_data[i:i+sg_window]
-            #         print("Process tile {} index from to: {} - {}".format(tile, i, window_end_index))
-            #
-            #
-            #
-            #
-            #
-            #     else:
-            #         print("\nreached end of processing in tile {} - index {} - {}".format(tile, i, window_end_index))
-            #         break
+
 
 
     print("elapsed time: ", time.time() - start , " [sec]")
