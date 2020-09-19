@@ -55,8 +55,6 @@ if __name__ == "__main__":
     version = ".006"
     root_server = r"https://e4ftl01.cr.usgs.gov/MOTA/"
     goal_drive = r"E:\modis\v6\hdf"
-    #firmen goal
-    #goal_drive = r"D:\private\Entwicklung\Python\Diplomarbeit\hdf"
 
     userpwd = "{us}:{pw}".format(us=username, pw=password)
     userAndPass = b64encode(str.encode(userpwd)).decode("ascii")

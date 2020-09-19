@@ -105,16 +105,15 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     data_block[data_block == 32767] = numpy.nan
 
     # # data ini to count how many data epochs are to the left and to the right of the center epoch etc
-    l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.max(data_block, axis=0)
-    l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.min(data_block, axis=0)
+    l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmax(data_block, axis=0)
+    l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmin(data_block, axis=0)
 
-    #reshape to (15,5760000)
-    l_max = l_max.reshape(sg_window, l_max.shape[1]*l_max.shape[2])
-    l_min = l_min.reshape(sg_window, l_min.shape[1] * l_min.shape[2])
+    print("l max: ", numpy.nanmax(l_max))
+    print("l min: ", numpy.nanmin(l_min))
 
-    noup_l = numpy.sum(noup_array[0:center, :, :], axis=0)  # numbers of used epochs on the left side
-    noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0)  # numbers of used epochs on the right side
-    noup_c = noup_array[center]  # numbers of used epochs on the center epoch
+    noup_l = numpy.sum(noup_array[0:center, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the left side
+    noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the right side
+    noup_c = noup_array[center].reshape(noup_array.shape[1]*noup_array.shape[2])  # numbers of used epochs on the center epoch
     # noup_c = torch.reshape(noup_c, (noup_c.shape[0], 1))
 
     print("\nDim Check for NOUP:")
@@ -122,16 +121,16 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     print("noup_r: ", noup_r.shape)
     print("noup_c: ", noup_c.shape)
 
-    n = numpy.sum(noup_array, axis=0)  # count all pixels that are used on the entire sg_window for the least square
+    n = numpy.sum(noup_array, axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # count all pixels that are used on the entire sg_window for the least square
     del noup_array
     print("n: ", n.shape)
-    print("Numbers of Observations check R: \n", noup_r[:4, :4])
+    print("Numbers of Observations check R: \n", noup_r[:4])
     print("Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
-    print("Numbers of Observations check L: \n", noup_l[:4, :4])
+    print("Numbers of Observations check L: \n", noup_l[:4])
     print("Min {} - Max {} - Median {}".format(noup_l.min(), noup_l.max(), numpy.nanmedian(noup_l)))
-    print("Numbers of Observations check C: \n", noup_c[:4, :4])
+    print("Numbers of Observations check C: \n", noup_c[:4])
     print("Min {} - Max {} - Median {}".format(noup_c.min(), noup_c.max(), numpy.nanmedian(noup_c)))
-    print("Numbers of Observations check N: \n", n[:4, :4])
+    print("Numbers of Observations check N: \n", n[:4])
     print("Min {} - Max {} - Median {}".format(n.min(), n.max(), numpy.nanmedian(n)))
 
 
@@ -142,10 +141,10 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
                                          numpy.where(n <= half_window)),
                                         axis=1)
     iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
-
+    print("IV.shape: ", iv.shape)
     return A, data_block, qual_block, noup_c, noup_r, noup_l, iv, l_max, l_min
 
-def fitl(lv, pv, xv, sg_window, iv, l_max, l_min):
+def fitl(lv, pv, xv, sg_window, iv):
 
     """
     # Linearer Fit, wenn zu wenige Beobachtungen im Zeitfenster vorliegen nach def. Kriterien
@@ -194,10 +193,10 @@ def fitl(lv, pv, xv, sg_window, iv, l_max, l_min):
     a0 = ai11 * vx0 + ai12 * vx1
     a1 = ai12 * vx0 + ai22 * vx1
 
-    fit[:, iv] = numpy.round(a0 * a1 * xv)
+    print("- shape a0: ", a0.shape)
+    print("- shape a1: ", a1.shape)
 
-    # fit = numpy.where(fit > l_max, l_max, fit)
-    # fit = numpy.where(fit < l_max, l_min, fit)
+    fit[:, iv] = numpy.round(a0 * a1 * xv)
 
     return fit.reshape(sg_window, 2400,2400)
 

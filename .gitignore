@@ -6,3 +6,6 @@
 __pycache__/**
 user_cred.py
 data/**
+QGis/**
+QGis
+fit_config.py

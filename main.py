@@ -114,18 +114,39 @@ if __name__ == "__main__":
 
             qual_block_nu = sigm/delta_lv
             print("Type qual_block: ", type(qual_block_nu))
+
+            # check if min or max values are overshooting
+            print("l_max: ", l_max[:, 1, 1])
+            print("l_min: ", l_min[:, 1, 1])
+
             [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+            delta_lv = abs(fit - data_block)
+            delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
+            print("delta_lv.shape: ", delta_lv.shape)
+            sigm = sigm * sig
+
+            qual_block_nu = sigm/delta_lv
+            print("Type qual_block: ", type(qual_block_nu))
+
+            # check if min or max values are overshooting
+            print("l_max: ", l_max[:, 1, 1])
+            print("l_min: ", l_min[:, 1, 1])
+
+            [fit, sig] = fitq(fit, qual_block_nu, A, sg_window)
+
+
+
 
             print("Start fitting linear ...")
 
-            fit = fitl(fit, qual_block_nu, A, sg_window, iv, l_max, l_min)
+            fit = fitl(fit, qual_block_nu, A, sg_window, iv)
 
+            fit = numpy.where(fit > l_max, l_max, fit)
+            fit = numpy.where(fit < l_min, l_min, fit)
 
-
-            #
             # # filtered epoch
             fit_layer = fit[fit_nr]
-
 
             # write output raster
             print("Fitlayer stats: ", fit_layer.shape)

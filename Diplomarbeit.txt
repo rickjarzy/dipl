@@ -59,5 +59,13 @@ Data Processing
 
 HDF Entpacken
 ============================
+Die NASA
+Die Daten werden mittels eines Webscrabber Scriptes und einer zur Verfügunggestellten
+
+
+Daten Fitten mittels Polynom Zweiten Grades und linearem Fit bei nicht genügend Observationen
+=============================================================================================
+
+Die Daten liegen als einzelene Bänder nach ihren tiles in eigenen Verzeichnissen dem Aufnahmedatum sortiert auf. Format ist GeoTIFF und die Projektion ist Sinusoidal.
 
 
