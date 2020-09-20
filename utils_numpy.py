@@ -28,6 +28,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
 
     #data_block.share_memory_()
     #qual_block.share_memory_()
+    print("\n# START READING SATDATA for BAND {}".format(band))
     for i in range(0, sg_window, 1):
 
         # load qual file
@@ -63,21 +64,6 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
 
     return data_block, qual_block, fitted_raster_band_name
 
-def update_data_block_numpy(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts):
-
-    #update datablock
-    data_block[0:-1, :, :] = data_block[1:, :, :]
-    print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
-    data_block[sg_window-1, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
-
-    #update qualblock
-    qual_block[0:-1, :, :] = qual_block[1:, :, :]
-    print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts])
-    qual_block[sg_window-1, :, :] = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
-
-    fitted_raster_band_name = list_data[fit_nr + ts]
-
-    return data_block, qual_block, fitted_raster_band_name
 
 def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
     """
@@ -97,11 +83,6 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     """
     print("# Processing Numpy")
     print("# No Need of Device : ", device)
-
-    A = numpy.ones([sg_window, 3])
-    A[:, 1] = numpy.arange(1, sg_window + 1, 1)
-    A[:, 2] = numpy.arange(1, sg_window + 1, 1)
-    A[:, 2] = A[:, 2] ** 2
 
     qual_block[qual_block == 0] = 1
     qual_block[qual_block == 1] = 0.75
@@ -132,7 +113,7 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     print("# noup_c: ", noup_c.shape)
 
     n = numpy.sum(noup_array, axis=0).reshape(noup_array.shape[1]*noup_array.shape[2])  # count all pixels that are used on the entire sg_window for the least square
-    del noup_array
+
     print("# n: ", n.shape)
     print("# Numbers of Observations check R: \n", noup_r[:4])
     print("# Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
@@ -152,7 +133,86 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
                                         axis=1)
     iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
     print("# IV.shape: ", iv.shape)
-    return A, data_block, qual_block, iv, l_max, l_min
+    return data_block, qual_block, noup_array,  iv, l_max, l_min
+
+
+def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts):
+
+    # update datablock
+    # -----------------
+    data_block[0:-1, :, :] = data_block[1:, :, :]
+    print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
+
+    ras_data_new = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
+    data_block[sg_window-1, :, :] = numpy.where(ras_data_new == 32767, numpy.nan, ras_data_new)
+
+    # update noup_array
+    # ------------------
+    noup_array[0:-1, :, :] = noup_array[1:, :, :]
+
+    # update qualblock
+    # ----------------
+    qual_block[0:-1, :, :] = qual_block[1:, :, :]
+    print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts])
+
+    qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
+
+    # update new noup_array epoch
+    noup_array[-1, :, :] = numpy.where(qual_data_new == 255, 0, 1)
+
+    # update weights
+    qual_data_new = numpy.where(qual_data_new == 0, 1, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 1, 0.75, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 2, 0.1, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 3, 0.01, qual_data_new)
+
+    qual_block[sg_window - 1, :, :] = numpy.where(qual_data_new == 255, numpy.nan, qual_data_new)
+
+    # # data ini to count how many data epochs are to the left and to the right of the center epoch etc
+    l_max = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmax(data_block, axis=0)
+    l_min = numpy.ones([sg_window, qual_block.shape[1], qual_block.shape[2]]) * numpy.nanmin(data_block, axis=0)
+
+    print("# l max: ", numpy.nanmax(l_max))
+    print("# l min: ", numpy.nanmin(l_min))
+
+    noup_l = numpy.sum(noup_array[0:center, :, :], axis=0).reshape(noup_array.shape[1] * noup_array.shape[2])  # numbers of used epochs on the left side
+    noup_r = numpy.sum(noup_array[center + 1:, :, :], axis=0).reshape(noup_array.shape[1] * noup_array.shape[2])  # numbers of used epochs on the right side
+    noup_c = noup_array[center].reshape(noup_array.shape[1] * noup_array.shape[2])  # numbers of used epochs on the center epoch
+
+    print("\n# Dim Check for NOUP:")
+    print("\n# noup_l: ", noup_l.shape)
+    print("# noup_r: ", noup_r.shape)
+    print("# noup_c: ", noup_c.shape)
+
+    n = numpy.sum(noup_array, axis=0).reshape(noup_array.shape[1] * noup_array.shape[2])  # count all pixels that are used on the entire sg_window for the least square
+
+    print("# n: ", n.shape)
+    print("# Numbers of Observations check R: \n", noup_r[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_r.min(), noup_r.max(), numpy.nanmedian(noup_r)))
+    print("# Numbers of Observations check L: \n", noup_l[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_l.min(), noup_l.max(), numpy.nanmedian(noup_l)))
+    print("# Numbers of Observations check C: \n", noup_c[:4])
+    print("# Min {} - Max {} - Median {}".format(noup_c.min(), noup_c.max(), numpy.nanmedian(noup_c)))
+    print("# Numbers of Observations check N: \n", n[:4])
+    print("# Min {} - Max {} - Median {}".format(n.min(), n.max(), numpy.nanmedian(n)))
+
+    ids_for_lin_fit = numpy.concatenate(
+        (numpy.where(noup_l <= 3),
+         numpy.where(noup_r <= 3),
+         numpy.where(noup_c <= 0),
+         numpy.where(n <= half_window)),
+        axis=1)
+    iv = numpy.unique(ids_for_lin_fit)  # ids sind gescheckt und passen
+    print("# IV.shape: ", iv.shape)
+
+
+
+
+    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + ".poly_%s.tif" % str(sg_window)
+
+    return data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min
+
+
 
 def write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info):
 
@@ -224,7 +284,7 @@ def fitl(lv, pv, xv, sg_window, iv):
     print("# shape a0: ", a0.shape)
     print("# shape a1: ", a1.shape)
 
-    fit[:, iv] = numpy.round(a0 * a1 * xv)
+    fit[:, iv] = numpy.round(a0 + a1*xv)
 
     return fit.reshape(sg_window, 2400,2400)
 
