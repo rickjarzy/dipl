@@ -72,7 +72,7 @@ if __name__ == "__main__":
         A[:, 2] = A[:, 2] ** 2
 
         weights = [1, 0.01, 0.01, 0.01]
-        name_weights_addition = ".poly_%s.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
+        name_weights_addition = ".poly_%s." + "{}_{}_{}_{}".format(weights[0], weights[1], weights[2], weights[3]).replace(".", "") + ".tif"
 
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
