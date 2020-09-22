@@ -206,8 +206,6 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
     print("# IV.shape: ", iv.shape)
 
 
-
-
     fitted_raster_band_name = list_data[fit_nr + ts][:-4] + ".poly_%s.tif" % str(sg_window)
 
     return data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min
@@ -290,6 +288,20 @@ def fitl(lv, pv, xv, sg_window, iv):
 
 
 def fitq(lv, pv, xv, sg_window):
+    """
+    Least Square Apporach to find the parameters of a polynomial second order. input data lv is a 3d numpyarray with dim
+    [sg_window, 2400, 2400]
+    Parameters
+    ----------
+    lv - 3ddim numpy array holding sat timeseries, shape: [sg_window, 2400,2400]
+    pv - 3ddim numpy array holding weights, shape: [sg_window, 2400,2400]
+    xv - 2ddim numpy array (A Matrix), shape: [sg_window, 3]
+    sg_window - int, describes the size of the savitzky golay filter window
+
+    Returns
+    -------
+
+    """
 
     # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
     # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
