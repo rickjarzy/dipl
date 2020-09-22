@@ -17,6 +17,8 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
     list_data
     device
     master_raster_info
+    fit_nr
+    name_weights_addition
 
     Returns
     -------
@@ -54,7 +56,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
             if fit_nr == i:
                 print("\n# Name of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
 
-                fitted_raster_band_name = list_data[i][:-4] + ".poly_%s.1_05_001_001.tif" % str(sg_window)
+                fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
 
 
             del data_ras
@@ -75,6 +77,7 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     sg_window
     device
     half_window
+    weights
     center
 
     Returns
