@@ -157,8 +157,8 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
-                    # elif ts == 20:
-                    #     break
+                    elif ts == 93:
+                        break
 
                     else:
                         try:

@@ -54,7 +54,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
             if fit_nr == i:
                 print("\n# Name of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
 
-                fitted_raster_band_name = list_data[i][:-4] + ".poly_%s.tif" % str(sg_window)
+                fitted_raster_band_name = list_data[i][:-4] + ".poly_%s.1_05_001_001.tif" % str(sg_window)
 
 
             del data_ras
@@ -85,8 +85,8 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     print("# No Need of Device : ", device)
 
     qual_block[qual_block == 0] = 1
-    qual_block[qual_block == 1] = 0.75
-    qual_block[qual_block == 2] = 0.1
+    qual_block[qual_block == 1] = 0.5
+    qual_block[qual_block == 2] = 0.01
     qual_block[qual_block == 3] = 0.01
 
     noup_array = numpy.where(qual_block == 255, 0, 1)      # exchange NaN Value 255 with 0
@@ -162,8 +162,8 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
 
     # update weights
     qual_data_new = numpy.where(qual_data_new == 0, 1, qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 1, 0.75, qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 2, 0.1, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 1, 0.5, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 2, 0.01, qual_data_new)
     qual_data_new = numpy.where(qual_data_new == 3, 0.01, qual_data_new)
 
     qual_block[sg_window - 1, :, :] = numpy.where(qual_data_new == 255, numpy.nan, qual_data_new)
@@ -206,7 +206,7 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
     print("# IV.shape: ", iv.shape)
 
 
-    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + ".poly_%s.tif" % str(sg_window)
+    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + ".poly_%s.1_05_001_001.tif" % str(sg_window)
 
     return data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min
 
