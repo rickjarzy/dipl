@@ -71,6 +71,8 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
+        weights = [1, 0.01, 0.01, 0.01]
+        name_weights_addition = ".poly_%s.1_001_001_001.tif"
 
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
@@ -98,9 +100,9 @@ if __name__ == "__main__":
                             # Initialize data fiting -load satellite data into data blocks
                             # ============================================================
 
-                            data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr)
+                            data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
-                            data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
+                            data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center)
 
 
                             #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
@@ -157,13 +159,13 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
-                    elif ts == 93:
+                    elif ts == 125:
                         break
 
                     else:
                         try:
                             # update data and qual information
-                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts)
+                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
 
                             #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 

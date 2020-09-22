@@ -2,7 +2,7 @@ import numpy
 from osgeo import gdal, gdalconst
 import os
 
-def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr):
+def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition):
 
     """
     Creates a initial datablock for the modis data and returns a numpy ndim array
@@ -65,7 +65,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
     return data_block, qual_block, fitted_raster_band_name
 
 
-def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center):
+def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center):
     """
     Creates A Matrix and matrizzes that count the number of usefull observation of the time window
     Parameters
@@ -84,10 +84,10 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     print("# Processing Numpy")
     print("# No Need of Device : ", device)
 
-    qual_block[qual_block == 0] = 1
-    qual_block[qual_block == 1] = 0.5
-    qual_block[qual_block == 2] = 0.01
-    qual_block[qual_block == 3] = 0.01
+    qual_block[qual_block == 0] = weights[0]
+    qual_block[qual_block == 1] = weights[1]
+    qual_block[qual_block == 2] = weights[2]
+    qual_block[qual_block == 3] = weights[3]
 
     noup_array = numpy.where(qual_block == 255, 0, 1)      # exchange NaN Value 255 with 0
 
@@ -136,7 +136,7 @@ def additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device,
     return data_block, qual_block, noup_array,  iv, l_max, l_min
 
 
-def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts):
+def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition):
 
     # update datablock
     # -----------------
@@ -161,10 +161,10 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
     noup_array[-1, :, :] = numpy.where(qual_data_new == 255, 0, 1)
 
     # update weights
-    qual_data_new = numpy.where(qual_data_new == 0, 1, qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 1, 0.5, qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 2, 0.01, qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 3, 0.01, qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 0, weights[0], qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 1, weights[1], qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
+    qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
     qual_block[sg_window - 1, :, :] = numpy.where(qual_data_new == 255, numpy.nan, qual_data_new)
 
@@ -206,7 +206,7 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
     print("# IV.shape: ", iv.shape)
 
 
-    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + ".poly_%s.1_05_001_001.tif" % str(sg_window)
+    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + name_weights_addition % str(sg_window)
 
     return data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min
 
