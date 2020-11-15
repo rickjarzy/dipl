@@ -73,16 +73,16 @@ if __name__ == "__main__":
 
         weights = [1, 0.01, 0.01, 0.01]
         name_weights_addition = ".poly_%s.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-
+        calc_from_to = [125, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
-            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))
+            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:]
 
             os.chdir(os.path.join(in_dir_tf, tile))
-            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))
+            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))[calc_from_to[0]:]
             len_list_data = len(list_data)
             # check if qual and sat data have the same amount of files
             if int(len(list_qual)) != int(len(list_data)):
@@ -93,9 +93,10 @@ if __name__ == "__main__":
 
             else:
 
-                for ts in range(0,len_list_data,1):
+                for ts in range(calc_from_to[0],len_list_data,1):
                     epoch_start = time.time()
-                    if ts == 0:
+                    ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
+                    if ts == ref_ras_epoch[0]:
                         try:
                             # Initialize data fiting -load satellite data into data blocks
                             # ============================================================
@@ -159,7 +160,7 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
-                    elif ts == 125:
+                    elif ts == calc_from_to[1]:
                         break
 
                     else:
