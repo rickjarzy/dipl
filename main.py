@@ -72,6 +72,7 @@ if __name__ == "__main__":
         A[:, 2] = A[:, 2] ** 2
 
         weights = [1, 0.01, 0.01, 0.01]
+
         name_weights_addition = ".poly_%s.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         calc_from_to = [125, 263]
 
