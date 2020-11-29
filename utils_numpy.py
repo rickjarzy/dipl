@@ -99,7 +99,9 @@ def perfom_fft(data_block):
     plt.xlabel("Power Spectrum [Hz]")
     plt.ylabel("Power")
 
-    indices = power_spectrum > 10000
+    # todo: find solution to get good schwellwert for intensity of power value
+    print("MAx power spectrum half: ", int(numpy.max(power_spectrum))/2)
+    indices = power_spectrum > int(numpy.max(power_spectrum))/2
     #indices = power_spectrum > 500
     power_spectrum_clean = power_spectrum * indices
     f_hat = indices * f_hat

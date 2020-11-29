@@ -60,7 +60,7 @@ if __name__ == "__main__":
         bands = fit_config.bands              #list(range(1,8,1))
         print(bands)
 
-        sg_window = 92
+        sg_window = 46
         window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
         fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
         center = int(numpy.median(window_arr))               # center index of the data stack
@@ -107,8 +107,7 @@ if __name__ == "__main__":
 
                         data_block, fitted_raster_band_name = init_data_block_fft(sg_window, b, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition)
 
-                        #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-                        #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
+                        # todo: implement fftn
 
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
@@ -117,7 +116,7 @@ if __name__ == "__main__":
                         # FFT Logic Here
 
 
-                        perfom_fft(data_block[:,0,0])
+                        perfom_fft(data_block[:,600,800])
 
 
                         break
