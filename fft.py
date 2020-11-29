@@ -8,7 +8,7 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy, write_fitted_raster_to_disk
+from utils_numpy import init_data_block_fft, perfom_fft,  update_data_block_numpy, write_fitted_raster_to_disk
 import fit_config
 
 
@@ -59,7 +59,8 @@ if __name__ == "__main__":
         tile = "h18v04"
         bands = fit_config.bands              #list(range(1,8,1))
         print(bands)
-        sg_window = 46
+
+        sg_window = 92
         window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
         fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
         center = int(numpy.median(window_arr))               # center index of the data stack
@@ -74,7 +75,7 @@ if __name__ == "__main__":
         weights = [1, 2, 3, 3]
 
         name_weights_addition = ".fft.%s.tif"
-        calc_from_to = [39, 263]
+        calc_from_to = [177, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -104,18 +105,19 @@ if __name__ == "__main__":
 
                         #data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
-                        data_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, fitted_raster_band_name = init_data_block_fft(sg_window, b, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition)
 
                         #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
                         #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
-                        print("DATABLOCK: \n", data_block[:,0,0])
+                        print("DATABLOCK: \n", data_block[:,2200,1000])
                         print("SHape Datablock: ", data_block.shape)
                         # FFT Logic Here
 
 
+                        perfom_fft(data_block[:,0,0])
 
 
                         break

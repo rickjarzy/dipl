@@ -1,4 +1,5 @@
 import numpy
+import matplotlib.pyplot as plt
 from osgeo import gdal, gdalconst
 import os
 
@@ -26,7 +27,7 @@ def init_data_block_fft(sg_window, band, in_dir_tf, tile, list_data, master_rast
     """
 
     data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
-    qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+    #qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
 
     #data_block.share_memory_()
     #qual_block.share_memory_()
@@ -63,8 +64,70 @@ def init_data_block_fft(sg_window, band, in_dir_tf, tile, list_data, master_rast
 
         except Exception as ErrorRasterDataReading:
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
-
+    data_block[data_block == 32767] = numpy.nan
     return data_block, fitted_raster_band_name
+
+def perfom_fft(data_block):
+
+    print("FFT Data shape: ", data_block.shape)
+
+    f = data_block
+    n = data_block.shape[0]
+    t = numpy.arange(0,n,1)
+
+    # interpolate on these positions of the data array where nans occure
+    data_block_nan_true = numpy.isfinite(data_block)
+    data_block_with_lin_interpol_where_nan = numpy.interp(t,t[data_block_nan_true], data_block[data_block_nan_true] )
+
+
+    f_hat = numpy.fft.fft(data_block_with_lin_interpol_where_nan, n)
+    power_spectrum = f_hat * numpy.conj(f_hat) / n
+
+    print("f_hat: ", f_hat)
+
+    fig,axs = plt.subplots(2,1)
+
+    plt.sca(axs[0])
+    plt.plot(t,f,color='c', LineWidth=1.5, label="Noisy")
+    plt.plot(t,data_block_with_lin_interpol_where_nan, color='k', LineWidth=0.5, label='with interpolation')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+    plt.sca(axs[1])
+    plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+    plt.plot(t[0], t[-1])
+    plt.xlabel("Power Spectrum [Hz]")
+    plt.ylabel("Power")
+
+    indices = power_spectrum > 10000
+    #indices = power_spectrum > 500
+    power_spectrum_clean = power_spectrum * indices
+    f_hat = indices * f_hat
+    ffilt = numpy.fft.ifft(f_hat)
+
+    fig,axs2 = plt.subplots(3,1)
+
+    plt.sca(axs2[0])
+    plt.plot(t,f,color='c', LineWidth=1.5, label="Noisy")
+    plt.plot(t,data_block_with_lin_interpol_where_nan, color='k', LineWidth=0.5, label='with interpolation')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+    plt.sca(axs2[1])
+    plt.plot(t,ffilt, color="k", LineWidth=2, label='Filtered')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+
+    plt.legend()
+
+
+
+
+
+    plt.show()
+
+
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition):
 
