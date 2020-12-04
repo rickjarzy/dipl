@@ -8,7 +8,7 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy, write_fitted_raster_to_disk
+from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy, write_fitted_raster_to_disk, plot_raw_data
 import fit_config
 
 
@@ -71,10 +71,10 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.01, 0.01, 0.01]
+        weights = [1, 0.5, 0.01, 0.01]
 
-        name_weights_addition = ".poly_%s.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-        calc_from_to = [125, 263]
+        name_weights_addition = ".poly_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
+        calc_from_to = [0, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -98,66 +98,84 @@ if __name__ == "__main__":
                     epoch_start = time.time()
                     ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
                     if ts == ref_ras_epoch[0]:
-                        try:
-                            # Initialize data fiting -load satellite data into data blocks
-                            # ============================================================
+                        #try:
+                        # Initialize data fiting -load satellite data into data blocks
+                        # ============================================================
 
-                            data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
-                            data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center)
-
-
-                            #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-                            #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
+                        data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center)
 
 
-                            print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
-                            print("DATABLOCK: \n", data_block[:,0,0])
-                            [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
+                        #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
+                        #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
-                            print("- fit.shape: ", fit.shape)
-                            print("- iv.shape: ", iv.shape)
+                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
 
-                            print("- delta_lv.shape: ", delta_lv.shape)
+                        plot_indizess = [500,1200]
+                        start_interpl = time.time()
+                        print("time start interpolation: ")
+                        print("finished interpl: ", time.time() - start_interpl , " [sec]")
+                        print("DATABLOCK: \n", data_block[:, plot_indizess[0], plot_indizess[1]])
 
-                            sigm = sigm * sig
-                            qual_block_nu = sigm/delta_lv
+                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
+                                      weights)
 
-                            [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
-                            sigm = sigm ** 0  # set back to ones, because its full of old values
-                            sigm = sigm * sig
 
-                            qual_block_nu = sigm/delta_lv
+                        [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
-                            [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
+                        print("- fit.shape: ", fit.shape)
+                        print("- fit data: \n", fit[:,plot_indizess[0], plot_indizess[1]])
+                        print("- iv.shape: ", iv.shape)
 
-                            sigm = sigm ** 0  # set back to ones, because its full of old values
-                            sigm = sigm * sig
+                        print("- delta_lv.shape: ", delta_lv.shape)
 
-                            qual_block_nu = sigm/delta_lv
+                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
+                                      weights,
+                                      fit[:, plot_indizess[0], plot_indizess[1]])
+                        break
 
-                            [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
+                        sigm = sigm * sig
+                        qual_block_nu = sigm/delta_lv
 
-                            print("\nStart fitting linear ...")
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
-                            fit = fitl(fit, qual_block_nu, A, sg_window, iv)
+                        sigm = sigm ** 0  # set back to ones, because its full of old values
+                        sigm = sigm * sig
 
-                            fit = numpy.where(fit > l_max, l_max, fit)
-                            fit = numpy.where(fit < l_min, l_min, fit)
+                        qual_block_nu = sigm/delta_lv
 
-                            # # filtered epoch
-                            fit_layer = fit[fit_nr]
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
-                            # write output raster
-                            write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                        sigm = sigm ** 0  # set back to ones, because its full of old values
+                        sigm = sigm * sig
 
-                            sigm = sigm ** 0            # set back to ones
-                            del delta_lv, fit
-                            print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
-                        except Exception as BrokenFirstIteration:
-                            print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
-                            break
+                        qual_block_nu = sigm/delta_lv
+
+                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
+
+                        print("\nStart fitting linear ...")
+
+                        fit = fitl(fit, qual_block_nu, A, sg_window, iv)
+
+                        fit = numpy.where(fit > l_max, l_max, fit)
+                        fit = numpy.where(fit < l_min, l_min, fit)
+
+                        # # filtered epoch
+                        fit_layer = fit[fit_nr]
+
+                        # write output raster
+                        write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+
+                        sigm = sigm ** 0            # set back to ones
+                        del delta_lv, fit
+                        print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
+                        # except Exception as BrokenFirstIteration:
+                        #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
+                        #     break
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
@@ -166,6 +184,7 @@ if __name__ == "__main__":
 
                     else:
                         try:
+                            break
                             # update data and qual information
                             data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
 
@@ -214,7 +233,7 @@ if __name__ == "__main__":
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
 
-
+            break
         print("elapsed time: ", time.time() - start , " [sec]")
         print("Programm ENDE")
     except KeyboardInterrupt:

@@ -1,7 +1,9 @@
+import os
 import numpy
 import matplotlib.pyplot as plt
 from osgeo import gdal, gdalconst
-import os
+from scipy.interpolate import interp1d
+from scipy.signal import argrelextrema
 
 def init_data_block_fft(sg_window, band, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition):
 
@@ -111,7 +113,7 @@ def perfom_fft(data_block):
 
     plt.sca(axs2[0])
     plt.plot(t,f,color='c', LineWidth=1.5, label="Noisy")
-    plt.plot(t,data_block_with_lin_interpol_where_nan, color='k', LineWidth=0.5, label='with interpolation')
+    plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='with interpolation')
     plt.xlim(t[0], t[-1])
     plt.legend()
 
@@ -120,14 +122,106 @@ def perfom_fft(data_block):
     plt.xlim(t[0], t[-1])
     plt.legend()
 
-
     plt.legend()
-
-
-
-
-
     plt.show()
+
+def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
+    print("Poly Data shape: ", data_block.shape)
+
+    n = data_block.shape[0]
+    t = numpy.arange(0, n, 1)
+
+    qual_factor = 100
+
+    good_qual = numpy.where(qual_block == qual_weights[0],qual_weights[0],numpy.nan) * qual_factor
+    okay_qual = numpy.where(qual_block == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
+    bad_qual  = numpy.where(qual_block == qual_weights[2],qual_weights[2], numpy.nan) * qual_factor
+    really_bad_qual = numpy.where(qual_block == qual_weights[3], qual_weights[3], numpy.nan) * qual_factor
+
+
+
+
+    # interpolate on these positions of the data array where nans occure
+    data_block_nan_true = numpy.isfinite(data_block)
+    data_block_with_lin_interpol_where_nan = numpy.interp(t, t[data_block_nan_true],
+                                                          data_block[data_block_nan_true])
+    print("t: ", t)
+    print("data_block_nan_true: ", data_block_nan_true)
+    print("t[data_block_nan_true]: ", t[data_block_nan_true])
+    print("data_block[data_block_nan_true]", data_block[data_block_nan_true])
+
+
+    f_hat = numpy.fft.fft(data_block_with_lin_interpol_where_nan, n)
+    power_spectrum = f_hat * numpy.conj(f_hat) / n
+    print("Power Spektrum Max: {} - Mean {} ".format(numpy.max(power_spectrum), numpy.mean(power_spectrum)))
+    print("Power Spektrum schwellwert: ", int(numpy.max(power_spectrum))/2)
+    #indices = power_spectrum > int(numpy.max(power_spectrum))/2
+    indices = power_spectrum > 10000
+    power_spectrum_clean = power_spectrum * indices
+    f_hat = indices * f_hat
+    ffilt = numpy.fft.ifft(f_hat)
+
+    # interpolate cubic object - has to be feeded with a time array - check out plot
+    data_block_with_cubic_interp_where_nan = interp1d(t, data_block_with_lin_interpol_where_nan, kind="cubic")
+
+    if len(fit_data) > 0:
+
+
+        print("DATABLOCK with Interplation: \n", data_block_with_lin_interpol_where_nan)
+        fig, axs = plt.subplots(2, 1)
+
+        plt.sca(axs[0])
+        plt.plot(t, data_block, color='c', LineWidth=2, label="Noisy")
+        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
+        plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':', label='cubic interp')
+        plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
+        plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+
+        plt.plot(t, good_qual, 'go', label="Good Quality")
+        plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+        plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+        plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+        plt.xlim(t[0], t[-1])
+        plt.ylabel("Intensity [%]")
+        plt.xlabel("Time [days]")
+        plt.legend()
+
+        plt.sca(axs[1])
+        plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum [Hz]")
+        plt.ylabel("Power")
+
+        plt.show()
+    else:
+        fig, axs = plt.subplots(2, 1)
+
+        plt.sca(axs[0])
+        plt.plot(t, data_block, color='c', LineWidth=1.5, label="Noisy")
+        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
+        plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':',label='cubic interp')
+        plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
+        plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+
+
+        plt.plot(t, good_qual, 'go', label="Good Quality")
+        plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+        plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+        plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+
+        plt.xlim(t[0], t[-1])
+        plt.ylabel("Intensity [%]")
+        plt.xlabel("Time [days]")
+        plt.legend()
+
+        plt.sca(axs[1])
+        plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum [Hz]")
+        plt.ylabel("Power")
+        plt.show()
 
 
 
