@@ -153,10 +153,19 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
 
     f_hat = numpy.fft.fft(data_block_with_lin_interpol_where_nan, n)
     power_spectrum = f_hat * numpy.conj(f_hat) / n
-    print("Power Spektrum Max: {} - Mean {} ".format(numpy.max(power_spectrum), numpy.mean(power_spectrum)))
-    print("Power Spektrum schwellwert: ", int(numpy.max(power_spectrum))/2)
-    #indices = power_spectrum > int(numpy.max(power_spectrum))/2
-    indices = power_spectrum > 10000
+    print("Power Spektrum Max: {} - Mean {} - mean int {}".format(numpy.max(power_spectrum), numpy.mean(power_spectrum), int(numpy.mean(power_spectrum))/5))
+    print("Power Spektrum schwellwert: ", int(numpy.max(power_spectrum.real))/2)
+
+    max_fft_spectr_value = numpy.max(power_spectrum)
+    power_spec_no_max = numpy.where(power_spectrum == max_fft_spectr_value, 0, power_spectrum)
+
+    threshold_remaining_values = numpy.nanmax(power_spec_no_max)/2
+    print("Power Spectrum no max - max: ", numpy.nanmax(power_spec_no_max))
+    print("Power Spectrum no max - max/2: ", numpy.nanmax(power_spec_no_max)/2)
+    print("Power Spectrum Threshold no max: ", int(threshold_remaining_values))
+
+
+    indices = power_spectrum > threshold_remaining_values
     power_spectrum_clean = power_spectrum * indices
     f_hat = indices * f_hat
     ffilt = numpy.fft.ifft(f_hat)
@@ -168,10 +177,10 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
 
 
         print("DATABLOCK with Interplation: \n", data_block_with_lin_interpol_where_nan)
-        fig, axs = plt.subplots(2, 1)
+        fig, axs = plt.subplots(3, 1)
 
         plt.sca(axs[0])
-        plt.plot(t, data_block, color='c', LineWidth=2, label="Noisy")
+        plt.plot(t, data_block, color='c', LineWidth=3, label="raw data")
         plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
         plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':', label='cubic interp')
         plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
@@ -189,19 +198,33 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
 
         plt.sca(axs[1])
         plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
+
         plt.plot(t[0], t[-1])
         plt.xlabel("Power Spectrum [Hz]")
         plt.ylabel("Power")
+        plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmean(power_spectrum)))
 
+
+        plt.sca(axs[2])
+        plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum no max [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(max_fft_spectr_value,
+                                                                                                  numpy.nanmax(
+                                                                                                      power_spec_no_max),
+                                                                                                  threshold_remaining_values))
         plt.show()
     else:
-        fig, axs = plt.subplots(2, 1)
+        fig, axs = plt.subplots(3, 1)
 
         plt.sca(axs[0])
-        plt.plot(t, data_block, color='c', LineWidth=1.5, label="Noisy")
+        plt.plot(t, data_block, color='c', LineWidth=3, label="raw data")
         plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
         plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':',label='cubic interp')
-        plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
         plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
 
 
@@ -218,9 +241,19 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
 
         plt.sca(axs[1])
         plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
         plt.plot(t[0], t[-1])
         plt.xlabel("Power Spectrum [Hz]")
         plt.ylabel("Power")
+        plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmean(power_spectrum)))
+
+        plt.sca(axs[2])
+        plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum no max [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
         plt.show()
 
 

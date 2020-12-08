@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
 
-                        plot_indizess = [500,1200]
+                        plot_indizess = [2000,100]
                         start_interpl = time.time()
                         print("time start interpolation: ")
                         print("finished interpl: ", time.time() - start_interpl , " [sec]")
@@ -121,8 +121,6 @@ if __name__ == "__main__":
                         plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
                                       qual_block[:, plot_indizess[0], plot_indizess[1]],
                                       weights)
-
-
 
                         [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
