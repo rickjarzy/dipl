@@ -8,7 +8,8 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy, write_fitted_raster_to_disk, plot_raw_data
+from utils_numpy import (additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy,
+                         write_fitted_raster_to_disk, plot_raw_data, interp_2d_data)
 import fit_config
 
 
@@ -118,6 +119,8 @@ if __name__ == "__main__":
                         print("finished interpl: ", time.time() - start_interpl , " [sec]")
                         print("DATABLOCK: \n", data_block[:, plot_indizess[0], plot_indizess[1]])
 
+                        data_block = interp_2d_data(data_block, sg_window)
+                        break
                         plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
                                       qual_block[:, plot_indizess[0], plot_indizess[1]],
                                       weights)

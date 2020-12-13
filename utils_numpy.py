@@ -1,9 +1,12 @@
 import os
 import numpy
+import time
 import matplotlib.pyplot as plt
 from osgeo import gdal, gdalconst
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, griddata
 from scipy.signal import argrelextrema
+
+
 
 def init_data_block_fft(sg_window, band, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition):
 
@@ -256,7 +259,68 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
         plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
         plt.show()
 
+def interp_2d_data(data_block, window_size):
 
+    """
+    Interpolates linear between nan values in the datablock of the satdata
+    e.g [350, 360, nan, nan, 390  400, nan, nan, 380] --> [342, 360, 370 ,380, 390, 400, 395, 390, 380]
+    Parameters
+    ----------
+    data_block      ndim array [window, 2400**2]
+    window_size     integer - describes how many epochs represent the data_block
+
+    Returns         numpy ndim array
+    -------
+
+    """
+
+    print("Executeing LINEAR data interpolation")
+
+    #data_block = data_block[:,:4,:4]
+
+    data_block_mat = data_block.reshape(window_size, data_block.shape[1]*data_block.shape[2])
+    # orig_data_block_rows = data_block.shape[1]
+    # orig_data_block_cols = data_block.shape[2]
+
+    # print("data_block_mat shape: ", data_block_mat.shape)
+    # print(data_block_mat)
+    # data_block_v = data_block_mat.T.reshape(window_size*orig_data_block_cols*orig_data_block_rows)
+    # print("data_block_v shape: ", data_block_v.shape)
+    # print(data_block_v)
+    #
+    # data_block_v_nan = numpy.isfinite(data_block_v)
+    # data_block_t = numpy.arange(0, len(data_block_v_nan))
+    # data_block_v_interp = numpy.round(numpy.interp(data_block_t, data_block_t[data_block_v_nan], data_block_v[data_block_v_nan]))
+    #
+    # data_block_mat_interp = data_block_v_interp.reshape(orig_data_block_cols*orig_data_block_rows, window_size).T
+    #
+    # print("datablock v interp: ", data_block_v_interp)
+    # print("databock interp shape: ", data_block_mat_interp.shape)
+    # print(data_block_mat_interp)
+
+    time_start = time.time()
+    print("Start for loop")
+    total = 2400**2
+    cou = 0
+    for i in range(0,data_block.shape[1]*data_block.shape[2],1):
+        try:
+            #print(" %d of %d left"%(total - i, total))
+
+            #print(data_block_mat[:,i])
+            data_block_v_nan = numpy.isfinite(data_block_mat[:,i])
+            data_block_t = numpy.arange(0, len(data_block_v_nan))
+            data_block_v_interp = numpy.round(numpy.interp(data_block_t, data_block_t[data_block_v_nan], data_block_mat[:,i][data_block_v_nan]))
+            #print(data_block_v_interp)
+            #print("\n")
+            cou += 1
+        except Exception as failure:
+            #print(failure.__traceback__.)
+            #print(cou)
+            #print(data_block_mat[:,i])
+            cou += 1
+    print("Finished loop after ", time.time() - time_start, " seconds")
+    print("cou: ", cou)
+    return None
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition):
 
@@ -679,7 +743,7 @@ def fit_fft(lv, pv, sq_window):
 
 
 
-    return f_dach
+    return None
 
 if __name__ == "__main__":
     print("Utils Numpy")
