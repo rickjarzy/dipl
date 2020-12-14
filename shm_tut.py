@@ -14,8 +14,12 @@ def function_to_call(input_info):
     print("spawn process nr : ", input_info["process_nr"])
 
     reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=input_info["shm"].buf)
+    orig_time = input_info["data"].shape[0]
+    orig_rows = input_info["data"].shape[1]
+    orig_cols = input_info["data"].shape[2]
 
-    print("dim reference block: ", reference_to_data_block.shape)
+    print("dim reference block: ", reference_to_data_block[:,input_info["from"], 0])
+    print(input_info["data"][:,0,0])
     data_mat = input_info["data"].reshape(input_info["data"].shape[0], input_info["data"].shape[1]*input_info["data"].shape[2])
 
     for i in range(0, data_mat.shape[1], 1):
@@ -23,13 +27,20 @@ def function_to_call(input_info):
         data_mat_v_nan = numpy.isfinite(data_mat[:,i])
         data_mat_v_t = numpy.arange(0, len(data_mat_v_nan),1)
 
-        try:
-            if False in data_mat_v_nan:
 
-                data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
+        try:
+
+            data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
+            data_mat[:,i] = data_mat_v_interp
+            if i == 0:
+                print("i == 0")
+                print(data_mat_v_interp)
+
         except:
             print("process_nr: ", input_info["process_nr"])
             print(data_mat[:,i])
+
+    reference_to_data_block[:, input_info["from"]:input_info["to"], :] = numpy.copy(data_mat.reshape(orig_time, orig_rows, orig_cols))
 
 
 
@@ -50,14 +61,17 @@ if __name__ == "__main__":
     data_shm = numpy.where(data_shm > 30000, numpy.nan, data_shm)
 
     print("data shape: ", data_shm.shape)
-    job_list_with_data_indizes=[]
+    job_list_with_data_indizes = []
     cou = 0
 
+    compare_buffer = []
     # calculate indizes to split data:
     for part in range(0, 2400, number_of_rows_data_part):
         print("\nfrom part: %d to part: %d" % (part, part+number_of_rows_data_part))
         print("data shape: ", data_shm[:, part:part+number_of_rows_data_part, :].shape)
         print(part)
+        compare_buffer.append(data_shm[:, part, 0])
+
         info_dict = {"from": part, "to": part + number_of_rows_data_part, "process_nr": cou, "shm": shm, "dim": (15, 2400, 2400),
                      "num_of_bytes": num_of_bytes, "data": data_shm[:,part:part+number_of_rows_data_part, :]}
 
@@ -66,9 +80,22 @@ if __name__ == "__main__":
         cou +=1
 
     print("Start timeing")
+
     start_time = time.time()
     multi_linear_interpolation(job_list_with_data_indizes)
     print("finished in ", time.time()-start_time, " seconds ")
+
+
+    print(data_shm[:,0,0] == compare_buffer[0])
+    print(data_shm[:,0,0])
+    print()
+    print(compare_buffer[0])
+    print()
+    print(data_shm[:, 800, 0] == compare_buffer[1])
+    print(data_shm[:, 800,0])
+    print()
+    print(compare_buffer[1])
+
 
 
 
