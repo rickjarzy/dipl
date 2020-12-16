@@ -94,13 +94,13 @@ if __name__ == "__main__":
 
             else:
 
-                for ts in range(calc_from_to[0],len_list_data,1):
+                for ts_epoch in range(calc_from_to[0], len_list_data, 1):
                     epoch_start = time.time()
                     ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
-                    if ts == ref_ras_epoch[0]:
+                    if ts_epoch == ref_ras_epoch[0]:
                         try:
-                            # Initialize data fiting -load satellite data into data blocks
-                            # ============================================================
+                            # Initialize data fitting -load satellite data into data blocks
+                            # =============================================================
 
                             data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
@@ -111,7 +111,8 @@ if __name__ == "__main__":
                             #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
 
-                            print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
+                            print("\nStart fitting %s - Nr %d out of %d "
+                                  "\n-------------------------------------------" % (fitted_raster_band_name, ts_epoch + 1, len_list_data))
                             print("DATABLOCK: \n", data_block[:,0,0])
                             [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
@@ -161,18 +162,18 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
-                    elif ts == calc_from_to[1]:
+                    elif ts_epoch == calc_from_to[1]:
                         break
 
                     else:
                         try:
                             # update data and qual information
-                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
+                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts_epoch, weights, name_weights_addition)
 
                             #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
-                            print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (
-                            fitted_raster_band_name, ts + 1, len_list_data))
+                            print("\nStart fitting %s - Nr %d out of %d "
+                                  "\n-------------------------------------------" % (fitted_raster_band_name, ts_epoch + 1, len_list_data))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
                             [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
