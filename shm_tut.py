@@ -56,8 +56,9 @@ def function_to_call(input_info):
     #return {"data": data_mat.reshape(orig_time, orig_rows, orig_cols), "from":input_info["from"], "to":input_info["to"]}
 
 
+
 if __name__ == "__main__":
-    number_cores = 4-1
+    number_cores = 4
     number_of_rows_data_part = 2400 // number_cores
     num_of_bytes = 15*2400*2400*8
     shm = shared_memory.SharedMemory(create=True, size=15*2400*2400*8)
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     print("finished in ", time.time()-start_time, " seconds ")
 
     print(data_shm[:,800,0])
-
+    shm.unlink()
     print("shared memory name: ", shm.name)
 
 
