@@ -1,6 +1,326 @@
-import numpy
-from osgeo import gdal, gdalconst
 import os
+import numpy
+import time
+import matplotlib.pyplot as plt
+from osgeo import gdal, gdalconst
+from scipy.interpolate import interp1d, griddata
+from scipy.signal import argrelextrema
+
+
+
+def init_data_block_fft(sg_window, band, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition):
+
+    """
+    Creates a initial datablock for the modis data and returns a numpy ndim array
+    Parameters
+    ----------
+    sg_window
+    band
+    in_dir_qs
+    in_dir_tf
+    tile
+    list_qual
+    list_data
+    device
+    master_raster_info
+    fit_nr
+    name_weights_addition
+
+    Returns
+    -------
+
+    """
+
+    data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+    #qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+
+    #data_block.share_memory_()
+    #qual_block.share_memory_()
+    print("\n# START READING SATDATA for BAND {}".format(band))
+    for i in range(0, sg_window, 1):
+
+        # load qual file
+        # try:
+        #     qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
+        #
+        #     #print("load qual data for band %d: %s" % (band, list_qual[i]))
+        #     #qual_band = qual_ras.GetRasterBand(1)
+        #     qual_block[i, :, :] = qual_ras.ReadAsArray()
+        #
+        #     del qual_ras
+        # except Exception as ErrorQualRasReading:
+        #     print("### ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+        # load satellite data
+        try:
+            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+
+            print("# load sat data for band %s: %s" % (str(band), list_data[i]))
+            #data_band = data_ras.GetRasterBand(1)
+            data_block[i, :, :] = data_ras.ReadAsArray()
+
+            # collect epochs raster name
+            if fit_nr == i:
+                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[i])))
+
+                fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
+
+
+            del data_ras
+
+        except Exception as ErrorRasterDataReading:
+            print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+    data_block[data_block == 32767] = numpy.nan
+    return data_block, fitted_raster_band_name
+
+def perfom_fft(data_block):
+
+    print("FFT Data shape: ", data_block.shape)
+
+    f = data_block
+    n = data_block.shape[0]
+    t = numpy.arange(0,n,1)
+
+    # interpolate on these positions of the data array where nans occure
+    data_block_nan_true = numpy.isfinite(data_block)
+    data_block_with_lin_interpol_where_nan = numpy.interp(t,t[data_block_nan_true], data_block[data_block_nan_true] )
+
+
+    f_hat = numpy.fft.fft(data_block_with_lin_interpol_where_nan, n)
+    power_spectrum = f_hat * numpy.conj(f_hat) / n
+
+    print("f_hat: ", f_hat)
+
+    fig,axs = plt.subplots(2,1)
+
+    plt.sca(axs[0])
+    plt.plot(t,f,color='c', LineWidth=1.5, label="Noisy")
+    plt.plot(t,data_block_with_lin_interpol_where_nan, color='k', LineWidth=0.5, label='with interpolation')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+    plt.sca(axs[1])
+    plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+    plt.plot(t[0], t[-1])
+    plt.xlabel("Power Spectrum [Hz]")
+    plt.ylabel("Power")
+
+    # todo: find solution to get good schwellwert for intensity of power value
+    print("MAx power spectrum half: ", int(numpy.max(power_spectrum))/2)
+    indices = power_spectrum > int(numpy.max(power_spectrum))/2
+    #indices = power_spectrum > 500
+    power_spectrum_clean = power_spectrum * indices
+    f_hat = indices * f_hat
+    ffilt = numpy.fft.ifft(f_hat)
+
+    fig,axs2 = plt.subplots(3,1)
+
+    plt.sca(axs2[0])
+    plt.plot(t,f,color='c', LineWidth=1.5, label="Noisy")
+    plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='with interpolation')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+    plt.sca(axs2[1])
+    plt.plot(t,ffilt, color="k", LineWidth=2, label='Filtered')
+    plt.xlim(t[0], t[-1])
+    plt.legend()
+
+    plt.legend()
+    plt.show()
+
+def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
+    print("Poly Data shape: ", data_block.shape)
+
+    n = data_block.shape[0]
+    t = numpy.arange(0, n, 1)
+
+    qual_factor = 100
+
+    good_qual = numpy.where(qual_block == qual_weights[0],qual_weights[0],numpy.nan) * qual_factor
+    okay_qual = numpy.where(qual_block == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
+    bad_qual  = numpy.where(qual_block == qual_weights[2],qual_weights[2], numpy.nan) * qual_factor
+    really_bad_qual = numpy.where(qual_block == qual_weights[3], qual_weights[3], numpy.nan) * qual_factor
+
+
+
+
+    # interpolate on these positions of the data array where nans occure
+    data_block_nan_true = numpy.isfinite(data_block)
+    data_block_with_lin_interpol_where_nan = numpy.interp(t, t[data_block_nan_true],
+                                                          data_block[data_block_nan_true])
+    print("t: ", t)
+    print("data_block_nan_true: ", data_block_nan_true)
+    print("t[data_block_nan_true]: ", t[data_block_nan_true])
+    print("data_block[data_block_nan_true]", data_block[data_block_nan_true])
+
+
+    f_hat = numpy.fft.fft(data_block_with_lin_interpol_where_nan, n)
+    power_spectrum = f_hat * numpy.conj(f_hat) / n
+    print("Power Spektrum Max: {} - Mean {} - mean int {}".format(numpy.max(power_spectrum), numpy.mean(power_spectrum), int(numpy.mean(power_spectrum))/5))
+    print("Power Spektrum schwellwert: ", int(numpy.max(power_spectrum.real))/2)
+
+    max_fft_spectr_value = numpy.max(power_spectrum)
+    power_spec_no_max = numpy.where(power_spectrum == max_fft_spectr_value, 0, power_spectrum)
+
+    threshold_remaining_values = numpy.nanmax(power_spec_no_max)/2
+    print("Power Spectrum no max - max: ", numpy.nanmax(power_spec_no_max))
+    print("Power Spectrum no max - max/2: ", numpy.nanmax(power_spec_no_max)/2)
+    print("Power Spectrum Threshold no max: ", int(threshold_remaining_values))
+
+
+    indices = power_spectrum > threshold_remaining_values
+    power_spectrum_clean = power_spectrum * indices
+    f_hat = indices * f_hat
+    ffilt = numpy.fft.ifft(f_hat)
+
+    # interpolate cubic object - has to be feeded with a time array - check out plot
+    data_block_with_cubic_interp_where_nan = interp1d(t, data_block_with_lin_interpol_where_nan, kind="cubic")
+
+    if len(fit_data) > 0:
+
+
+        print("DATABLOCK with Interplation: \n", data_block_with_lin_interpol_where_nan)
+        fig, axs = plt.subplots(3, 1)
+
+        plt.sca(axs[0])
+        plt.plot(t, data_block, color='c', LineWidth=3, label="raw data")
+        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
+        plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':', label='cubic interp')
+        plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
+        plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+
+        plt.plot(t, good_qual, 'go', label="Good Quality")
+        plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+        plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+        plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+        plt.xlim(t[0], t[-1])
+        plt.ylabel("Intensity [%]")
+        plt.xlabel("Time [days]")
+        plt.legend()
+
+        plt.sca(axs[1])
+        plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
+
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmean(power_spectrum)))
+
+
+        plt.sca(axs[2])
+        plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum no max [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(max_fft_spectr_value,
+                                                                                                  numpy.nanmax(
+                                                                                                      power_spec_no_max),
+                                                                                                  threshold_remaining_values))
+        plt.show()
+    else:
+        fig, axs = plt.subplots(3, 1)
+
+        plt.sca(axs[0])
+        plt.plot(t, data_block, color='c', LineWidth=3, label="raw data")
+        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
+        plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':',label='cubic interp')
+        plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+
+
+        plt.plot(t, good_qual, 'go', label="Good Quality")
+        plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+        plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+        plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+
+        plt.xlim(t[0], t[-1])
+        plt.ylabel("Intensity [%]")
+        plt.xlabel("Time [days]")
+        plt.legend()
+
+        plt.sca(axs[1])
+        plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmean(power_spectrum)))
+
+        plt.sca(axs[2])
+        plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+        plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+        plt.plot(t[0], t[-1])
+        plt.xlabel("Power Spectrum no max [Hz]")
+        plt.ylabel("Power")
+        plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
+        plt.show()
+
+def interp_2d_data(data_block, window_size):
+
+    """
+    Interpolates linear between nan values in the datablock of the satdata
+    e.g [350, 360, nan, nan, 390  400, nan, nan, 380] --> [342, 360, 370 ,380, 390, 400, 395, 390, 380]
+    Parameters
+    ----------
+    data_block      ndim array [window, 2400**2]
+    window_size     integer - describes how many epochs represent the data_block
+
+    Returns         numpy ndim array
+    -------
+
+    """
+
+    print("Executeing LINEAR data interpolation")
+
+    #data_block = data_block[:,:4,:4]
+
+    data_block_mat = data_block.reshape(window_size, data_block.shape[1]*data_block.shape[2])
+    # orig_data_block_rows = data_block.shape[1]
+    # orig_data_block_cols = data_block.shape[2]
+
+    # print("data_block_mat shape: ", data_block_mat.shape)
+    # print(data_block_mat)
+    # data_block_v = data_block_mat.T.reshape(window_size*orig_data_block_cols*orig_data_block_rows)
+    # print("data_block_v shape: ", data_block_v.shape)
+    # print(data_block_v)
+    #
+    # data_block_v_nan = numpy.isfinite(data_block_v)
+    # data_block_t = numpy.arange(0, len(data_block_v_nan))
+    # data_block_v_interp = numpy.round(numpy.interp(data_block_t, data_block_t[data_block_v_nan], data_block_v[data_block_v_nan]))
+    #
+    # data_block_mat_interp = data_block_v_interp.reshape(orig_data_block_cols*orig_data_block_rows, window_size).T
+    #
+    # print("datablock v interp: ", data_block_v_interp)
+    # print("databock interp shape: ", data_block_mat_interp.shape)
+    # print(data_block_mat_interp)
+
+    time_start = time.time()
+    print("Start for loop")
+    total = 2400**2
+    cou = 0
+    for i in range(0,data_block.shape[1]*data_block.shape[2],1):
+        try:
+            #print(" %d of %d left"%(total - i, total))
+
+            #print(data_block_mat[:,i])
+            data_block_v_nan = numpy.isfinite(data_block_mat[:,i])
+            data_block_t = numpy.arange(0, len(data_block_v_nan))
+            data_block_v_interp = numpy.round(numpy.interp(data_block_t, data_block_t[data_block_v_nan], data_block_mat[:,i][data_block_v_nan]))
+            #print(data_block_v_interp)
+            #print("\n")
+            cou += 1
+        except Exception as failure:
+            #print(failure.__traceback__.)
+            #print(cou)
+            #print(data_block_mat[:,i])
+            cou += 1
+    print("Finished loop after ", time.time() - time_start, " seconds")
+    print("cou: ", cou)
+    return None
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition):
 
@@ -43,18 +363,18 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
 
             del qual_ras
         except Exception as ErrorQualRasReading:
-            print("# ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+            print("### ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
         # load satellite data
         try:
             data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
 
-            print("# load sat data for band %d: %s" % (band, list_data[i]))
+            print("# load sat data for band %s: %s" % (str(band), list_data[i]))
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = data_ras.ReadAsArray()
 
             # collect epochs raster name
             if fit_nr == i:
-                print("\n# Name of fitted tile will be: {}\n".format(os.path.join(tile, list_data[i])))
+                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[i])))
 
                 fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
 
@@ -62,7 +382,7 @@ def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual
             del data_ras
 
         except Exception as ErrorRasterDataReading:
-            print("# ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+            print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
     return data_block, qual_block, fitted_raster_band_name
 
@@ -416,6 +736,14 @@ def fitq_numpy(lv, pv, A, sq_window):
     print("a0: ", x_dach[0,0,0])
     print("")
     return None, None, None
+
+def fit_fft(lv, pv, sq_window):
+
+    print("Starting FFT")
+
+
+
+    return None
 
 if __name__ == "__main__":
     print("Utils Numpy")
