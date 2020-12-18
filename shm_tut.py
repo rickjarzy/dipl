@@ -47,6 +47,7 @@ def function_to_call(input_info):
     #reference_to_data_block[:, input_info["from"]:input_info["to"], :] = data_mat.reshape(orig_time, orig_rows, orig_cols)
     #return {"data": data_mat.reshape(orig_time, orig_rows, orig_cols), "from":input_info["from"], "to":input_info["to"]}
 
+
 def big_data(num_cores):
     col_row = 2400
     number_cores = num_cores
@@ -110,7 +111,3 @@ if __name__ == "__main__":
     print(data_shm)
 
     print("shared memory name: ", shm.name)
-
-
-
-
