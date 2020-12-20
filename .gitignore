@@ -6,3 +6,8 @@
 __pycache__/**
 user_cred.py
 data/**
+QGis/**
+QGis
+fit_config.py
+*.patch
+test_fft.py

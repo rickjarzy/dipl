@@ -8,8 +8,7 @@ import numpy
 from osgeo import gdalconst
 #import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import (additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy,
-                         write_fitted_raster_to_disk, plot_raw_data, interp_2d_data)
+from utils_numpy import init_data_block_fft, perfom_fft,  update_data_block_numpy, write_fitted_raster_to_disk
 import fit_config
 
 
@@ -51,9 +50,6 @@ if __name__ == "__main__":
             in_dir_tf = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A4"
             out_dir_fit = r"/home/iot/scripts/dev/projects/timeseries/data/v6/fitted"
         else:
-            os.environ['PROJ_LIB'] = r"C:\Users\ArzbergerP\.conda\envs\py38\Library\share\proj"
-            os.environ['GDAL_DATA'] = r"C:\Users\ArzbergerP\.conda\envs\py38\Library\share\gdal"
-
             in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
             in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
             out_dir_fit = r"E:\MODIS_Data\v6\fitted"
@@ -63,7 +59,8 @@ if __name__ == "__main__":
         tile = "h18v04"
         bands = fit_config.bands              #list(range(1,8,1))
         print(bands)
-        sg_window = 15
+
+        sg_window = 46
         window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
         fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
         center = int(numpy.median(window_arr))               # center index of the data stack
@@ -75,10 +72,10 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.01, 0.01]
+        weights = [1, 2, 3, 3]
 
-        name_weights_addition = ".poly_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-        calc_from_to = [0, 263]
+        name_weights_addition = ".fft.%s.tif"
+        calc_from_to = [177, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -98,63 +95,35 @@ if __name__ == "__main__":
 
             else:
 
-                for ts_epoch in range(calc_from_to[0], len_list_data, 1):
+                for ts in range(calc_from_to[0],len_list_data,1):
                     epoch_start = time.time()
                     ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
-
-                    if ts_epoch == ref_ras_epoch[0]:
+                    if ts == ref_ras_epoch[0]:
                         #try:
                         # Initialize data fiting -load satellite data into data blocks
                         # ============================================================
 
+                        #data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
-                        data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, fitted_raster_band_name = init_data_block_fft(sg_window, b, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition)
 
-                        data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center)
+                        # todo: implement fftn
 
-
-                        #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-                        #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
+                        print("DATABLOCK: \n", data_block[:,2200,1000])
+                        print("SHape Datablock: ", data_block.shape)
+                        # FFT Logic Here
 
-                        [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
+
+                        perfom_fft(data_block[:,600,800])
 
 
-                        sigm = sigm * sig
-                        qual_block_nu = sigm/delta_lv
-
-                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        sigm = sigm ** 0  # set back to ones, because its full of old values
-                        sigm = sigm * sig
-
-                        qual_block_nu = sigm/delta_lv
-
-                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        sigm = sigm ** 0  # set back to ones, because its full of old values
-                        sigm = sigm * sig
-
-                        qual_block_nu = sigm/delta_lv
-
-                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        print("\nStart fitting linear ...")
-
-                        fit = fitl(fit, qual_block_nu, A, sg_window, iv)
-
-                        fit = numpy.where(fit > l_max, l_max, fit)
-                        fit = numpy.where(fit < l_min, l_min, fit)
-
-                        # # filtered epoch
-                        fit_layer = fit[fit_nr]
+                        break
 
                         # write output raster
-                        write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                        #write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
-                        sigm = sigm ** 0            # set back to ones
-                        del delta_lv, fit
                         print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
@@ -162,52 +131,26 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
-                    elif ts_epoch == calc_from_to[1]:
+                    elif ts == calc_from_to[1]:
                         break
 
                     else:
                         try:
-                            break
                             # update data and qual information
-                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts_epoch, weights, name_weights_addition)
+                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
 
                             #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
-                            print("\nStart fitting %s - Nr %d out of %d "
-                                  "\n-------------------------------------------" % (fitted_raster_band_name, ts_epoch + 1, len_list_data))
+                            print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (
+                            fitted_raster_band_name, ts + 1, len_list_data))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
-                            [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
-
-                            print("- fit.shape: ", fit.shape)
-                            print("- iv.shape: ", iv.shape)
 
 
-                            sigm = sigm * sig
-                            qual_block_nu = sigm / delta_lv
-
-                            [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                            sigm = sigm ** 0  # set back to ones, because its full of old values
-                            sigm = sigm * sig
-                            qual_block_nu = sigm / delta_lv
-
-                            [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                            print("\nStart fitting linear ...")
-
-                            fit = fitl(fit, qual_block_nu, A, sg_window, iv)
-
-                            fit = numpy.where(fit > l_max, l_max, fit)
-                            fit = numpy.where(fit < l_min, l_min, fit)
-
-                            # # filtered epoch
-                            fit_layer = fit[fit_nr]
+                            ## FFT Logic Here
 
                             # write output raster
-                            write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                            # write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
-                            sigm = sigm ** 0  # set back to ones
-                            del delta_lv
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
@@ -216,7 +159,7 @@ if __name__ == "__main__":
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
 
-            break
+
         print("elapsed time: ", time.time() - start , " [sec]")
         print("Programm ENDE")
     except KeyboardInterrupt:

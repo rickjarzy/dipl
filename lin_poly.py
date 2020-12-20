@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
         weights = [1, 0.5, 0.01, 0.01]
 
-        name_weights_addition = ".poly_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
+        name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         calc_from_to = [0, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
@@ -116,10 +116,34 @@ if __name__ == "__main__":
                         #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
                         #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
-                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
+                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
+
+                        plot_indizess = [2000,100]
+                        start_interpl = time.time()
+                        print("time start interpolation: ")
+                        print("finished interpl: ", time.time() - start_interpl , " [sec]")
+                        print("DATABLOCK: \n", data_block[:, plot_indizess[0], plot_indizess[1]])
+
+
+                        data_block = interp_2d_data(data_block, sg_window)
+                        break
+                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
+                                      weights)
 
                         [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
+                        print("- fit.shape: ", fit.shape)
+                        print("- fit data: \n", fit[:,plot_indizess[0], plot_indizess[1]])
+                        print("- iv.shape: ", iv.shape)
+
+                        print("- delta_lv.shape: ", delta_lv.shape)
+
+                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
+                                      weights,
+                                      fit[:, plot_indizess[0], plot_indizess[1]])
+                        break
 
                         sigm = sigm * sig
                         qual_block_nu = sigm/delta_lv
