@@ -81,7 +81,8 @@ def calc_cuda():
 if __name__ == "__main__":
 
     start = time()
-    calc_cuda()
+    #calc_cuda()
+    calc_numpy()
     print("time elapsed: ", time()-start, " [sec]")
     print("Programm ENDE")
 
