@@ -3,6 +3,7 @@ import multiprocessing
 from multiprocessing import shared_memory
 from osgeo import gdal
 import os
+import glob
 
 def get_master_raster_info(in_dir, tile, sat_product):
     os.chdir(os.path.join(in_dir, tile))
