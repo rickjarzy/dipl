@@ -98,7 +98,7 @@ def additional_stat_info_raster_mp(qual_block, weights):
     return qual_block
 
 
-def update_data_block_mp(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition):
+def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts, weights, name_weights_addition):
 
     # update datablock
     # -----------------
@@ -108,10 +108,6 @@ def update_data_block_mp(data_block, qual_block, noup_array, in_dir_tf, in_dir_q
     ras_data_new = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
     data_block[sg_window-1, :, :] = numpy.where(ras_data_new == 32767, numpy.nan, ras_data_new)
 
-    # update noup_array
-    # ------------------
-    noup_array[0:-1, :, :] = noup_array[1:, :, :]
-
     # update qualblock
     # ----------------
     qual_block[0:-1, :, :] = qual_block[1:, :, :]
@@ -119,8 +115,6 @@ def update_data_block_mp(data_block, qual_block, noup_array, in_dir_tf, in_dir_q
 
     qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
 
-    # update new noup_array epoch
-    noup_array[-1, :, :] = numpy.where(qual_data_new == 255, 0, 1)
 
     # update weights
     qual_data_new = numpy.where(qual_data_new == 0, weights[0], qual_data_new)
@@ -132,7 +126,7 @@ def update_data_block_mp(data_block, qual_block, noup_array, in_dir_tf, in_dir_q
 
     fitted_raster_band_name = list_data[fit_nr + ts][:-4] + name_weights_addition % str(sg_window)
 
-    return data_block, qual_block, noup_array, fitted_raster_band_name
+    return data_block, qual_block, fitted_raster_band_name
 
 
 def multi_linear_interpolation(job_list):
@@ -171,7 +165,6 @@ def multi_lin_interp_process(input_info):
         data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
 
         if False in data_mat_v_nan:
-
             try:
 
                 data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
