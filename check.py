@@ -120,8 +120,9 @@ def calc_torch_cpu():
 if __name__ == "__main__":
 
     start = time()
+    #calc_cuda()
     calc_numpy()
-    #calc_numpy()
+
     print("time elapsed: ", time()-start, " [sec]")
     print("Programm ENDE")
 
