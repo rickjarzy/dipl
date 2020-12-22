@@ -4,6 +4,21 @@ from multiprocessing import shared_memory
 from osgeo import gdal
 import os
 
+def get_master_raster_info(in_dir, tile, sat_product):
+    os.chdir(os.path.join(in_dir, tile))
+    print(os.path.join(in_dir, tile))
+    master_raster_file_name = sorted(glob.glob("*.tif"))[0]
+
+    master_raster = gdal.Open(master_raster_file_name, gdal.GA_ReadOnly)
+    geo_trafo = master_raster.GetGeoTransform()
+    projection = master_raster.GetProjection()
+
+    block_size_x = master_raster.RasterXSize
+    block_size_y = master_raster.RasterYSize
+
+    driver = master_raster.GetDriver()
+
+    return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
 def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
