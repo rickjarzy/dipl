@@ -130,24 +130,23 @@ def perfom_fft(data_block):
 
 def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
     print("Poly Data shape: ", data_block.shape)
-
+    print("poly data: ", data_block)
     n = data_block.shape[0]
     t = numpy.arange(0, n, 1)
 
     qual_factor = 100
+    print("here")
 
     good_qual = numpy.where(qual_block == qual_weights[0],qual_weights[0],numpy.nan) * qual_factor
     okay_qual = numpy.where(qual_block == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
     bad_qual  = numpy.where(qual_block == qual_weights[2],qual_weights[2], numpy.nan) * qual_factor
     really_bad_qual = numpy.where(qual_block == qual_weights[3], qual_weights[3], numpy.nan) * qual_factor
 
-
-
-
     # interpolate on these positions of the data array where nans occure
     data_block_nan_true = numpy.isfinite(data_block)
-    data_block_with_lin_interpol_where_nan = numpy.interp(t, t[data_block_nan_true],
-                                                          data_block[data_block_nan_true])
+    print("nan search: ", data_block_nan_true)
+    data_block_with_lin_interpol_where_nan = numpy.interp(t, t[data_block_nan_true], data_block[data_block_nan_true])
+
     print("t: ", t)
     print("data_block_nan_true: ", data_block_nan_true)
     print("t[data_block_nan_true]: ", t[data_block_nan_true])
@@ -321,6 +320,8 @@ def interp_2d_data(data_block, window_size):
     print("Finished loop after ", time.time() - time_start, " seconds")
     print("cou: ", cou)
     return None
+
+
 
 def init_data_block_numpy(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition):
 
@@ -537,6 +538,9 @@ def update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_di
 
 def write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info):
 
+    # set negative values to nan value of 32767
+    fit_layer[fit_layer < 0] = 32767
+    fit_layer[fit_layer > 9999] = 32767
     # write output raster
     print("- Fitlayer stats: ", fit_layer.shape)
     out_ras_name = os.path.join(out_dir_fit, tile, fitted_raster_band_name)

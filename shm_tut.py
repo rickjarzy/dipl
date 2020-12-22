@@ -7,10 +7,10 @@ import time
 def multi_linear_interpolation(job_list):
 
     with multiprocessing.Pool() as pool:
-        pool.map(function_to_call, job_list)
+        pool.map(multi_lin_interp, job_list)
 
-def function_to_call(input_info):
-
+def multi_lin_interp(input_info):
+    print("inpuft_info", input_info)
     print("\nspawn process nr : ", input_info["process_nr"])
     existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
 
@@ -21,7 +21,6 @@ def function_to_call(input_info):
     orig_time = reference_to_data_block.shape[0]
     orig_rows = reference_to_data_block.shape[1]
     orig_cols = reference_to_data_block.shape[2]
-
 
     print("ref data dtype: ", reference_to_data_block.dtype)
     print("\n")
@@ -91,7 +90,6 @@ if __name__ == "__main__":
     job_list_with_data_indizes = []
     cou = 0
 
-    compare_buffer = []
     # calculate indizes to split data:
     for part in range(0, col_row, number_of_rows_data_part):
         print("\nfrom part: %d to part: %d" % (part, part+number_of_rows_data_part))
@@ -113,6 +111,5 @@ if __name__ == "__main__":
     print(data_shm[:,0,0])
     print(data_shm[:, 800, 0])
     print(data_shm[:, 1600, 0])
-
 
     print("shared memory name: ", shm.name)

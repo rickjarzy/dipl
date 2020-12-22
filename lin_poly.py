@@ -6,10 +6,11 @@ import time
 import socket
 import numpy
 from osgeo import gdalconst
-#import multiprocessing
+import multiprocessing
 from multi_fit_single_utils import *
 from utils_numpy import (additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy,
                          write_fitted_raster_to_disk, plot_raw_data, interp_2d_data)
+from utils_mp import init_data_block_mp, additional_stat_info_raster_mp, multi_lin_interp_process, multi_linear_interpolation
 import fit_config
 
 
@@ -82,6 +83,12 @@ if __name__ == "__main__":
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
+        # multiprocessing constants
+        num_of_pyhsical_cores = 4 - 1
+        number_of_rows_data_part = master_raster_info[2] // num_of_pyhsical_cores
+        num_of_buf_bytes = sg_window * master_raster_info[2] * master_raster_info[3] * 8
+
+
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
             list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:]
@@ -108,9 +115,9 @@ if __name__ == "__main__":
                         # ============================================================
 
 
-                        data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
 
-                        data_block, qual_block, noup_array, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, weights, center)
+                        qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
 
                         #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
@@ -118,64 +125,57 @@ if __name__ == "__main__":
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
 
-                        plot_indizess = [2000,100]
+                        plot_indizess = [800,800]
                         start_interpl = time.time()
                         print("time start interpolation: ")
                         print("finished interpl: ", time.time() - start_interpl , " [sec]")
-                        print("DATABLOCK: \n", data_block[:, plot_indizess[0], plot_indizess[1]])
+                        print("datablock type: ", type(data_block))
+
+                        print(data_block[:,plot_indizess[0], plot_indizess[1]])
 
 
-                        data_block = interp_2d_data(data_block, sg_window)
-                        break
-                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
-                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
-                                      weights)
 
+
+                        # interpolate linear on nan values
+                        # - keep in mind - shit data will allways stay shit data
+
+
+                        job_list_with_data_inidzes = []             # for mp pool
+                        cou = 0
+                        start_interp_time = time.time()
+
+                        # create sections that should run in parallel
+                        for part in range(0, master_raster_info[2], number_of_rows_data_part):
+                            print(part)
+                            info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm, "process_nr": cou,
+                                         "dim":(sg_window, master_raster_info[2], master_raster_info[3]), "num_of_bytes": num_of_buf_bytes}
+                            job_list_with_data_inidzes.append(info_dict)
+                            cou += 1
+
+
+                        multi_linear_interpolation(job_list_with_data_inidzes)
+                        print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
+
+                        # END linear interpolation
                         [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
                         print("- fit.shape: ", fit.shape)
                         print("- fit data: \n", fit[:,plot_indizess[0], plot_indizess[1]])
-                        print("- iv.shape: ", iv.shape)
 
                         print("- delta_lv.shape: ", delta_lv.shape)
 
-                        plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
-                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
-                                      weights,
-                                      fit[:, plot_indizess[0], plot_indizess[1]])
-                        break
+                        # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                        #               qual_block[:, plot_indizess[0], plot_indizess[1]],
+                        #               weights,
+                        #               fit[:, plot_indizess[0], plot_indizess[1]])
 
                         sigm = sigm * sig
                         qual_block_nu = sigm/delta_lv
 
                         [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        sigm = sigm ** 0  # set back to ones, because its full of old values
-                        sigm = sigm * sig
-
-                        qual_block_nu = sigm/delta_lv
-
-                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        sigm = sigm ** 0  # set back to ones, because its full of old values
-                        sigm = sigm * sig
-
-                        qual_block_nu = sigm/delta_lv
-
-                        [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
-
-                        print("\nStart fitting linear ...")
-
-                        fit = fitl(fit, qual_block_nu, A, sg_window, iv)
-
-                        fit = numpy.where(fit > l_max, l_max, fit)
-                        fit = numpy.where(fit < l_min, l_min, fit)
-
-                        # # filtered epoch
-                        fit_layer = fit[fit_nr]
 
                         # write output raster
-                        write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                        write_fitted_raster_to_disk(fit[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
                         sigm = sigm ** 0            # set back to ones
                         del delta_lv, fit
@@ -186,6 +186,7 @@ if __name__ == "__main__":
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
+                        break
                     elif ts_epoch == calc_from_to[1]:
                         break
 
@@ -193,7 +194,7 @@ if __name__ == "__main__":
                         try:
                             break
                             # update data and qual information
-                            data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts_epoch, weights, name_weights_addition)
+                            data_block, qual_block, noup_array, fitted_raster_band_name = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts_epoch, weights, name_weights_addition)
 
                             #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
