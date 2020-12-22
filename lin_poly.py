@@ -8,9 +8,8 @@ import numpy
 from osgeo import gdalconst
 import multiprocessing
 from multi_fit_single_utils import *
-from utils_numpy import (additional_stat_info_raster_numpy, init_data_block_numpy, fitq, fitl, update_data_block_numpy,
-                         write_fitted_raster_to_disk, plot_raw_data, interp_2d_data)
-from utils_mp import init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation
+from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data)
+from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation)
 import fit_config
 
 
