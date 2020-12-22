@@ -122,7 +122,7 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
 
     ras_data_new = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
-    data_block[sg_window-1, :, :] = numpy.where(ras_data_new == 32767, numpy.nan, ras_data_new)
+    #data_block[sg_window-1, :, :] = numpy.where(ras_data_new == 32767, numpy.nan, ras_data_new)
 
     # update qualblock
     # ----------------
