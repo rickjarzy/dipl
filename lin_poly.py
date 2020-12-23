@@ -239,7 +239,7 @@ if __name__ == "__main__":
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
 
-            break
+
         print("elapsed time: ", time.time() - start , " [sec]")
         shm.unlink()
         print("Programm ENDE")
