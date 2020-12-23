@@ -245,3 +245,4 @@ if __name__ == "__main__":
         print("Programm ENDE")
     except KeyboardInterrupt:
         print("### PROGRAMM ENDED BY USER")
+        shm.unlink()
