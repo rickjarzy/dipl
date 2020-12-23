@@ -74,9 +74,9 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.01, 0.01]
+        weights = [1, 0.5, 0.01, 0.01, 0.01]
 
-        name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
+        name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
         calc_from_to = [0, 263]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
@@ -241,6 +241,7 @@ if __name__ == "__main__":
 
             break
         print("elapsed time: ", time.time() - start , " [sec]")
+        shm.unlink()
         print("Programm ENDE")
     except KeyboardInterrupt:
         print("### PROGRAMM ENDED BY USER")

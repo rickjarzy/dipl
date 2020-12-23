@@ -122,7 +122,7 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
 
     ras_data_new = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
-    #data_block[sg_window-1, :, :] = numpy.where(ras_data_new == 32767, numpy.nan, ras_data_new)
+    data_block[sg_window-1, :, :] = ras_data_new
 
     # update qualblock
     # ----------------
@@ -138,7 +138,7 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
     qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
-    qual_block[sg_window - 1, :, :] = numpy.where(qual_data_new == 255, numpy.nan, qual_data_new)
+    qual_block[sg_window - 1, :, :] = qual_data_new
 
     fitted_raster_band_name = list_data[fit_nr + ts][:-4] + name_weights_addition % str(sg_window)
 
@@ -171,7 +171,7 @@ def multi_lin_interp_process(input_info):
     data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0], reference_to_data_block.shape[1]*reference_to_data_block.shape[2])
     print(data_mat.shape)
 
-    # create some missing data --> transforms dataytpe to floa64!!!
+    # setting int Nan value to numpy.nan --> transforms dataytpe to floa64!!!
     data_mat = numpy.where(data_mat == 32767, numpy.nan, data_mat)
 
     # iter through
