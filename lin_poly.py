@@ -77,7 +77,7 @@ if __name__ == "__main__":
         weights = [1, 0.5, 0.01, 0.01, 0.01]
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
-        calc_from_to = [0, 263]
+        calc_from_to = [0, 355]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
