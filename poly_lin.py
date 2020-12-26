@@ -77,9 +77,9 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.01, 0.01, 0.01]
+        weights = [1, 0.5, 0.01, 0.01]
 
-        name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
+        name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         calc_from_to = [0, 355]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
@@ -111,77 +111,73 @@ if __name__ == "__main__":
                     ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
 
                     if ts_epoch == ref_ras_epoch[0]:
-                        #try:
-                        # Initialize data fiting -load satellite data into data blocks
-                        # ============================================================
+                        try:
+                            # Initialize data fiting -load satellite data into data blocks
+                            # ============================================================
 
 
-                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
+                            data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
 
-                        qual_block = additional_stat_info_raster_mp(qual_block, weights)
+                            qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
-                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
+                            print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
 
-                        plot_indizess = [800,800]
-                        start_interpl = time.time()
-                        print("time start interpolation: ")
-                        print("finished interpl: ", time.time() - start_interpl , " [sec]")
-                        print("datablock type: ", type(data_block))
+                            plot_indizess = [800,800]
+                            start_interpl = time.time()
 
-                        print(data_block[:,plot_indizess[0], plot_indizess[1]])
+                            print(data_block[:,plot_indizess[0], plot_indizess[1]])
 
-                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
-                        data_block[:] = fit
-                        del fit
+                            [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
+                            data_block[:] = fit
+                            del fit
 
-                        # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
-                        #               qual_block[:, plot_indizess[0], plot_indizess[1]],
-                        #               weights,
-                        #               fit[:, plot_indizess[0], plot_indizess[1]])
+                            # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                            #               qual_block[:, plot_indizess[0], plot_indizess[1]],
+                            #               weights,
+                            #               fit[:, plot_indizess[0], plot_indizess[1]])
 
-                        sigm = sigm * sig
-                        qual_block_nu = sigm/delta_lv
+                            sigm = sigm * sig
+                            qual_block_nu = sigm/delta_lv
 
-                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block_nu, A, sg_window)
-                        data_block[:] = fit
-                        del fit
+                            [fit, sig, delta_lv] = fitq_mp(data_block, qual_block_nu, A, sg_window)
+                            data_block[:] = fit
+                            del fit
 
-                        # interpolate linear on nan values
-                        # - keep in mind - shit data will allways stay shit data
+                            # interpolate linear on nan values
+                            # - keep in mind - shit data will allways stay shit data
 
 
-                        job_list_with_data_inidzes = []             # for mp pool
-                        cou = 0
-                        start_interp_time = time.time()
+                            job_list_with_data_inidzes = []             # for mp pool
+                            cou = 0
+                            start_interp_time = time.time()
 
-                        # create sections that should run in parallel
-                        for part in range(0, master_raster_info[2], number_of_rows_data_part):
-                            print(part)
-                            info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm, "process_nr": cou,
-                                         "dim":(sg_window, master_raster_info[2], master_raster_info[3]), "num_of_bytes": num_of_buf_bytes}
-                            job_list_with_data_inidzes.append(info_dict)
-                            cou += 1
+                            # create sections that should run in parallel
+                            for part in range(0, master_raster_info[2], number_of_rows_data_part):
+                                print(part)
+                                info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm, "process_nr": cou,
+                                             "dim":(sg_window, master_raster_info[2], master_raster_info[3]), "num_of_bytes": num_of_buf_bytes}
+                                job_list_with_data_inidzes.append(info_dict)
+                                cou += 1
 
 
-                        multi_linear_interpolation(job_list_with_data_inidzes)
-                        print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
+                            multi_linear_interpolation(job_list_with_data_inidzes)
+                            print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
 
-                        # END linear interpolation
+                            # END linear interpolation
 
-                        # write output raster
-                        write_fitted_raster_to_disk(data_block[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                            # write output raster
+                            write_fitted_raster_to_disk(data_block[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
-                        sigm = sigm ** 0            # set back to ones
-                        del delta_lv, fit
+                            sigm = sigm ** 0            # set back to ones
+                            del delta_lv
 
-                        print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
-                        # except Exception as BrokenFirstIteration:
-                        #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
-                        #     break
-                        # except KeyboardInterrupt:
-                        #     print("### PROGRAMM ENDED BY USER")
-                        #     break
+                            print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
+                        except Exception as BrokenFirstIteration:
+                            print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
+                            shm.unlink()
+                            break
 
+                        break
                     elif ts_epoch == calc_from_to[1]:
                         break
 
@@ -235,10 +231,9 @@ if __name__ == "__main__":
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
+                            shm.unlink()
                             break
-                        # except KeyboardInterrupt:
-                        #     print("### PROGRAMM ENDED BY USER")
-                        #     break
+
 
 
         print("elapsed time: ", time.time() - start , " [sec]")

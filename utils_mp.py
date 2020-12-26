@@ -138,6 +138,8 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
     qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
+    qual_data_new[qual_data_new == 255] = numpy.nan
+
     qual_block[sg_window - 1, :, :] = qual_data_new
 
     fitted_raster_band_name = list_data[fit_nr + ts][:-4] + name_weights_addition % str(sg_window)
