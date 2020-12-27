@@ -1,9 +1,13 @@
+import os
+import glob
 import numpy
 import multiprocessing
 from multiprocessing import shared_memory
 from osgeo import gdal
-import os
-import glob
+from matplotlib import pyplot as plt
+
+
+
 
 def get_master_raster_info(in_dir, tile, sat_product):
     os.chdir(os.path.join(in_dir, tile))
@@ -22,7 +26,7 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
+def init_data_block_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
 
     """
     Creates a initial datablock for the modis data and returns a numpy ndim array
@@ -46,12 +50,13 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
     """
 
     #data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
-    qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+
     shm = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
     data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm.buf)
 
-    #data_block.share_memory_()
-    #qual_block.share_memory_()
+    shm_qual = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
+    qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm_qual.buf)
+
     print("\n# START READING SATDATA for BAND {}".format(band))
     for i in range(0, sg_window, 1):
 
@@ -86,33 +91,7 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
     print("data_block from readout: ", data_block[:,2000,100])
-    return data_block, qual_block, fitted_raster_band_name, shm
-
-
-def additional_stat_info_raster_mp(qual_block, weights):
-    """
-    Converts qual raster data to weights
-    Parameters
-    ----------
-    qual_block ndarry - size (sg_window, master_raster_info[2], master_raster_info[3]
-    weights - list - contains the weights for the spezific quality coding
-
-    Returns qualdatablock with new weights encoding
-    -------
-
-    """
-    print("# Processing Numpy")
-
-    qual_block[qual_block == 0] = weights[0]
-    qual_block[qual_block == 1] = weights[1]
-    qual_block[qual_block == 2] = weights[2]
-    qual_block[qual_block == 3] = weights[3]
-
-    qual_block[qual_block == 255] = numpy.nan  # set to 0 so in the ausgleich the nan -> zero convertion is not needed
-
-
-    return qual_block
-
+    return data_block, qual_block, fitted_raster_band_name, shm, shm_qual
 
 def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts, weights, name_weights_addition):
 
@@ -147,35 +126,34 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     return data_block, qual_block, fitted_raster_band_name
 
 
-def multi_linear_interpolation(job_list):
-
-    with multiprocessing.Pool() as pool:
-        pool.map(multi_lin_interp_process, job_list)
-
-def multi_lin_interp_process(input_info):
-
-    print("\nspawn process nr : ", input_info["process_nr"])
+def perform_fft(input_info):
+    print("\nspawn FFT process nr : ", input_info["process_nr"])
     existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
-
+    existing_shm_qual = shared_memory.SharedMemory(name=input_info["shm_qual"].name)
     # get data to process out of buffer
     reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
+    reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
 
     # strore orig time, cols and row information - needed for reshaping
     orig_time = reference_to_data_block.shape[0]
     orig_rows = reference_to_data_block.shape[1]
     orig_cols = reference_to_data_block.shape[2]
 
+    qual_weights = input_info["weights"]
+    qual_factor = 100
 
     print("ref data dtype: ", reference_to_data_block.dtype)
     print("\n")
 
     # reshape data from buffer to 2d matrix with the time as y coords and x as the values
     data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0], reference_to_data_block.shape[1]*reference_to_data_block.shape[2])
+    qual_mat = reference_to_qual_block.reshape(reference_to_data_block.shape[0], reference_to_data_block.shape[1]*reference_to_data_block.shape[2])
     print(data_mat.shape)
 
     # setting int Nan value to numpy.nan --> transforms dataytpe to floa64!!!
     data_mat = numpy.where(data_mat == 32767, numpy.nan, data_mat)
     n = data_mat.shape[0]
+    t = numpy.arange(0, n, 1)
     # iter through
     for i in range(0, data_mat.shape[1], 1):
 
@@ -184,11 +162,18 @@ def multi_lin_interp_process(input_info):
 
         if False in data_mat_v_nan:
             try:
+                # interpolate on that spots
+                data_mat_v_interp = numpy.round(
+                    numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:, i][data_mat_v_nan]))
 
-                data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
+                # calculate the fft
                 f_hat = numpy.fft.fft(data_mat_v_interp, n)
+                # and the power spectrum - which frequencies are dominant
                 power_spectrum = f_hat * numpy.conj(f_hat) / n
+
+                # get the max power value
                 max_fft_spectr_value = numpy.max(power_spectrum)
+                # set it to zeros so one can find those frequencies that are far lower and important but still no noise
                 power_spec_no_max = numpy.where(power_spectrum == max_fft_spectr_value, 0, power_spectrum)
 
                 threshold_remaining_values = numpy.nanmax(power_spec_no_max) / 2
@@ -197,21 +182,65 @@ def multi_lin_interp_process(input_info):
                 f_hat = indices * f_hat
                 ffilt = numpy.fft.ifft(f_hat)
 
-                if i == 0:
-                    print("i == 0")
+                if i <= 3:
+                    print("i == %d" % i)
                     print("data mat: ", data_mat[:, i])
                     print("data_mat_v_interp", data_mat_v_interp)
 
                     # print("data mat:", data_mat[:, i])
                     # print("data_mat.dtype: ", data_mat.dtype)
                     # print("data_mat_interp.dtype: ", data_mat_v_interp.dtype)
-                    data_mat_v_interp = numpy.round(data_mat_v_interp).astype(numpy.int16)
+                    ffilt = numpy.round(ffilt).astype(numpy.int16)
                     # print("\ntransfrom to int16: ", data_mat_v_interp)
                     # print("\ndata_mat_interp.dtype: ", data_mat_v_interp.dtype)
-                    data_mat[:, i] = data_mat_v_interp
+                    data_mat[:, i] = ffilt
+                    fig, axs = plt.subplots(3, 1)
+
+                    good_qual = numpy.where(qual_mat[:,i] == qual_weights[0], qual_weights[0], numpy.nan) * qual_factor
+                    okay_qual = numpy.where(qual_mat[:,i] == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
+                    bad_qual = numpy.where(qual_mat[:,i] == qual_weights[2], qual_weights[2], numpy.nan) * qual_factor
+                    really_bad_qual = numpy.where(qual_mat[:,i] == qual_weights[3], qual_weights[3],
+                                                  numpy.nan) * qual_factor
+
+                    plt.sca(axs[0])
+                    plt.plot(t, data_mat[:, i], color='c', LineWidth=3, label="raw data")
+                    plt.plot(t, data_mat_v_interp, color='k', LineWidth=1, linestyle='--',
+                             label='lin interp')
+                    plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+
+                    plt.plot(t, good_qual, 'go', label="Good Quality")
+                    plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+                    plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+                    plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+                    plt.xlim(t[0], t[-1])
+                    plt.ylabel("Intensity [%]")
+                    plt.xlabel("Time [days]")
+                    plt.legend()
+
+                    plt.sca(axs[1])
+                    plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+                    plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
+                    plt.plot(t[0], t[-1])
+                    plt.xlabel("Power Spectrum [Hz]")
+                    plt.ylabel("Power")
+                    plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value,
+                                                                                         numpy.nanmean(power_spectrum)))
+
+                    plt.sca(axs[2])
+                    plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+                    plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+                    plt.plot(t[0], t[-1])
+                    plt.xlabel("Power Spectrum no max [Hz]")
+                    plt.ylabel("Power")
+                    plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(
+                        max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
+
+                    # plot data
+                    plt.show()
                     continue
 
-                data_mat[:, i] = data_mat_v_interp
+                data_mat[:, i] = ffilt
             except:
                 break
 
@@ -221,89 +250,9 @@ def multi_lin_interp_process(input_info):
     # transorm float64 back to INT16!!
     # save interpolation results on the shared memory object
     reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
+    existing_shm_qual.close()
+    existing_shm.close()
+def multi_fft(job_list):
 
-def fitq_mp(lv, pv, xv, sg_window):
-    """
-    Least Square Apporach to find the parameters of a polynomial second order. input data lv is a 3d numpyarray with dim
-    [sg_window, 2400, 2400]
-    Parameters
-    ----------
-    lv - 3ddim numpy array holding sat timeseries, shape: [sg_window, 2400,2400]
-    pv - 3ddim numpy array holding weights, shape: [sg_window, 2400,2400]
-    xv - 2ddim numpy array (A Matrix), shape: [sg_window, 3]
-    sg_window - int, describes the size of the savitzky golay filter window
-
-    Returns
-    -------
-
-    """
-
-    # Quadratischer Fit Input Matrix in Spalten Pixelwerte in Zeilen die Zeitinformation
-    # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
-    # pv ... Gewichtsvektor mit  p = 1 fuer MCD43A2 = 0 0.2 bei MCD43A2=1 (bei MODIS) in erster
-    # Iteration, der bei den weiteren Iterationen entsprechend ueberschrieben wird.
-    # xv ... Zeit in day of year. Damit die Integerwerte bei Quadrierung nicht zu groß werden anstatt
-    # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
-    # A [ax0, ax1, ax2] Designmatrix
-    # Formeln aus
-    print("# Start Fit Polynom ...")
-    lv = lv.reshape(lv.shape[0], lv.shape[1] * lv.shape[2])
-    pv = pv.reshape(pv.shape[0], pv.shape[1] * pv.shape[2])
-    xv = xv[:, 1].reshape(sg_window, 1)
-
-    print("# lv.shape : ", lv.shape)
-    print("# pv.shape : ", pv.shape)
-    print("# xv.shape : ", xv.shape)
-
-    ax0 = xv ** 0  # Vektor Laenge = 15 alle Elemente = 1 aber nur derzeit so bei Aufruf, spaeter bei z.B.
-    # Fit von Landsat Aufnahmen doy Vektor z.B. [220, 780, 820, 1600 ...]
-    ax1 = xv ** 1  # Vektor Laenge = 15 [1, 2 , 3 , 4 ... 15]
-    ax2 = xv ** 2  # [ 1 , 4 , 9 ... 225]
-
-    # ATPA Normalgleichungsmatrix
-    a11 = numpy.nansum(ax0 * pv * ax0, 0)
-    a12 = numpy.nansum(ax0 * pv * ax1, 0)
-    a13 = numpy.nansum(ax0 * pv * ax2, 0)
-
-    a22 = numpy.nansum(ax1 * pv * ax1, 0)
-    a23 = numpy.nansum(ax1 * pv * ax2, 0)
-    a33 = numpy.nansum(ax2 * pv * ax2, 0)
-
-    # Determinante (ATPA)
-    det = a11 * a22 * a33 + a12 * a23 * a13 \
-          + a13 * a12 * a23 - a13 * a22 * a13 \
-          - a12 * a12 * a33 - a11 * a23 * a23 \
-
-        # Invertierung (ATPA) mit: Quelle xxx mit Zitat
-    # da die Inverse von A symmetrisch ueber die Hauptdiagonale ist, entspricht ai12 = ai21
-    # (ATPA)-1
-    ai11 = (a22 * a33 - a23 * a23) / det
-    ai12 = (a13 * a23 - a12 * a33) / det
-    ai13 = (a12 * a23 - a13 * a22) / det
-    ai22 = (a11 * a33 - a13 * a13) / det
-    ai23 = (a13 * a12 - a11 * a23) / det
-    ai33 = (a11 * a22 - a12 * a12) / det
-
-    # ATPL mit Bezeichnung vx0 fueer Vektor x0 nansum ... fuer nodata-summe
-    vx0 = numpy.nansum(ax0 * pv * lv, 0)
-    vx1 = numpy.nansum(ax1 * pv * lv, 0)
-    vx2 = numpy.nansum(ax2 * pv * lv, 0)
-
-    # Quotienten der quadratischen Gleichung ... bzw. Ergebnis dieser Funktion
-    a0 = ai11 * vx0 + ai12 * vx1 + ai13 * vx2
-    a1 = ai12 * vx0 + ai22 * vx1 + ai23 * vx2
-    a2 = ai13 * vx0 + ai23 * vx1 + ai33 * vx2
-    print("# shape a0: ", a0.shape)
-    print("# shape a1: ", a1.shape)
-    print("# shape a2: ", a2.shape)
-
-    fit = numpy.round(a0 + a1*xv + a2*(xv**2))
-
-    delta_lv = abs(fit - lv)
-    delta_lv = numpy.where(delta_lv<1, 1, delta_lv)
-    sig = numpy.nansum(delta_lv,0)
-    print("# SIG.shape. ", sig.shape)
-    return fit.reshape(sg_window, 2400,2400), sig.reshape(2400, 2400), delta_lv.reshape(sg_window, 2400,2400)
-
-if __name__ == "__main__":
-    print("Programm ENDE")
+    with multiprocessing.Pool() as pool:
+        pool.map(perform_fft, job_list)

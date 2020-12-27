@@ -5,10 +5,8 @@ import glob
 import time
 import socket
 import numpy
-from osgeo import gdalconst
-#import multiprocessing
-from multi_fit_single_utils import *
-from utils_numpy import init_data_block_fft, perfom_fft,  update_data_block_numpy, write_fitted_raster_to_disk
+from utils_numpy import write_fitted_raster_to_disk
+from utils_fft import init_data_block_fft, get_master_raster_info, multi_fft, update_data_block_mp
 import fit_config
 
 
@@ -79,6 +77,12 @@ if __name__ == "__main__":
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
+        # multiprocessing constants
+        num_of_pyhsical_cores = 4 - 1
+        number_of_rows_data_part = master_raster_info[2] // num_of_pyhsical_cores
+        num_of_buf_bytes = sg_window * master_raster_info[2] * master_raster_info[3] * 8
+
+
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
             list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:]
@@ -105,19 +109,27 @@ if __name__ == "__main__":
 
                         #data_block, qual_block, fitted_raster_band_name = init_data_block_numpy(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, device, master_raster_info, fit_nr, name_weights_addition)
 
-                        data_block, fitted_raster_band_name = init_data_block_fft(sg_window, b, in_dir_tf, tile, list_data, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, qual_block, fitted_raster_band_name, shm, shm_qual = init_data_block_fft(sg_window, b, in_dir_qs, in_dir_tf, tile,list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
 
-                        # todo: implement fftn
-
-
-                        print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
-                        print("DATABLOCK: \n", data_block[:,2200,1000])
+                        print("\nStart fitting FFT %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts+1, len_list_data))
                         print("SHape Datablock: ", data_block.shape)
                         # FFT Logic Here
 
+                        job_list_with_data_inidzes = []  # for mp pool
+                        cou = 0
+                        start_interp_time = time.time()
+                        # create sections that should run in parallel
+                        for part in range(0, master_raster_info[2], number_of_rows_data_part):
+                            print(part)
+                            info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm,
+                                         "process_nr": cou, "shm_qual": shm_qual, "weights": weights,
+                                         "dim": (sg_window, master_raster_info[2], master_raster_info[3]),
+                                         "num_of_bytes": num_of_buf_bytes}
+                            job_list_with_data_inidzes.append(info_dict)
+                            cou += 1
 
-                        perfom_fft(data_block[:,600,800])
-
+                        multi_fft(job_list_with_data_inidzes)
+                        print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
 
                         break
 
@@ -127,11 +139,15 @@ if __name__ == "__main__":
                         print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
+                        #     shm.unlink()
+                        #     shm_qual.unlink()
                         #     break
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
                     elif ts == calc_from_to[1]:
+                        shm.unlink()
+                        shm_qual.unlink()
                         break
 
                     else:
@@ -154,6 +170,8 @@ if __name__ == "__main__":
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
+                            shm.unlink()
+                            shm_qual.unlink()
                             break
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
@@ -162,5 +180,9 @@ if __name__ == "__main__":
 
         print("elapsed time: ", time.time() - start , " [sec]")
         print("Programm ENDE")
+        shm.unlink()
+        shm_qual.unlink()
     except KeyboardInterrupt:
+        shm.unlink()
+        shm_qual.unlink()
         print("### PROGRAMM ENDED BY USER")
