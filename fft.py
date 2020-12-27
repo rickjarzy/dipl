@@ -9,7 +9,12 @@ from utils_numpy import write_fitted_raster_to_disk
 from utils_fft import init_data_block_fft, get_master_raster_info, multi_fft, update_data_block_mp
 import fit_config
 
+"""
 
+ATTENTION - THIS SOFTWARE FITS FOR AN ENTIRE YEAR!!!!!!
+
+
+"""
 if __name__ == "__main__":
     try:
         start = time.time()
@@ -58,8 +63,8 @@ if __name__ == "__main__":
         bands = fit_config.bands              #list(range(1,8,1))
         print(bands)
 
-        sg_window = 46
-        window_arr = numpy.arange(0,sg_window,1)       # range from 0 to sg_window
+        sg_window = 46                                       # fit an entire year
+        window_arr = numpy.arange(0,sg_window,1)             # range from 0 to sg_window
         fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
         center = int(numpy.median(window_arr))               # center index of the data stack
         sigm = numpy.ones((sg_window, 2400,2400))
@@ -136,7 +141,6 @@ if __name__ == "__main__":
                         # write output raster
                         #write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
-                        print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
                         #     shm.unlink()
@@ -146,21 +150,22 @@ if __name__ == "__main__":
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break
                     elif ts == calc_from_to[1]:
+                        shm.close()
+                        shm_qual.close()
                         shm.unlink()
                         shm_qual.unlink()
                         break
 
                     else:
                         try:
-                            # update data and qual information
+                            #todo: update data and qual information
                             data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
 
-                            #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
+
 
                             print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (
                             fitted_raster_band_name, ts + 1, len_list_data))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
-
 
                             ## FFT Logic Here
 
@@ -170,6 +175,8 @@ if __name__ == "__main__":
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
+                            shm.close()
+                            shm_qual.close()
                             shm.unlink()
                             shm_qual.unlink()
                             break
@@ -180,9 +187,13 @@ if __name__ == "__main__":
 
         print("elapsed time: ", time.time() - start , " [sec]")
         print("Programm ENDE")
+        shm.close()
+        shm_qual.close()
         shm.unlink()
         shm_qual.unlink()
     except KeyboardInterrupt:
+        shm.close()
+        shm_qual.close()
         shm.unlink()
         shm_qual.unlink()
         print("### PROGRAMM ENDED BY USER")

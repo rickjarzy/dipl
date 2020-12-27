@@ -126,34 +126,42 @@ def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, lis
     return data_block, qual_block, fitted_raster_band_name
 
 
-def perform_fft(input_info):
+def perform_fft(input_info, plot=False):
+
+
     print("\nspawn FFT process nr : ", input_info["process_nr"])
-    existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
-    existing_shm_qual = shared_memory.SharedMemory(name=input_info["shm_qual"].name)
     # get data to process out of buffer
+    existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
     reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
-    reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
+    print("ref data dtype: ", reference_to_data_block.dtype)
+    print("\n")
+
+    # reshape data from buffer to 2d matrix with the time as y coords and x as the values
+    data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0],
+                                               reference_to_data_block.shape[1] * reference_to_data_block.shape[2])
 
     # strore orig time, cols and row information - needed for reshaping
     orig_time = reference_to_data_block.shape[0]
     orig_rows = reference_to_data_block.shape[1]
     orig_cols = reference_to_data_block.shape[2]
 
-    qual_weights = input_info["weights"]
-    qual_factor = 100
+    # if plots are whished
+    if plot:
+        existing_shm_qual = shared_memory.SharedMemory(name=input_info["shm_qual"].name)
+        reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:,
+                                  input_info["from"]:input_info["to"], :]
+        qual_weights = input_info["weights"]
+        qual_factor = 1
+        qual_mat = reference_to_qual_block.reshape(reference_to_qual_block.shape[0],
+                                                   reference_to_qual_block.shape[1] * reference_to_qual_block.shape[2])
 
-    print("ref data dtype: ", reference_to_data_block.dtype)
-    print("\n")
-
-    # reshape data from buffer to 2d matrix with the time as y coords and x as the values
-    data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0], reference_to_data_block.shape[1]*reference_to_data_block.shape[2])
-    qual_mat = reference_to_qual_block.reshape(reference_to_data_block.shape[0], reference_to_data_block.shape[1]*reference_to_data_block.shape[2])
-    print(data_mat.shape)
+    print("Data Mat Shape", data_mat.shape)
 
     # setting int Nan value to numpy.nan --> transforms dataytpe to floa64!!!
     data_mat = numpy.where(data_mat == 32767, numpy.nan, data_mat)
     n = data_mat.shape[0]
     t = numpy.arange(0, n, 1)
+
     # iter through
     for i in range(0, data_mat.shape[1], 1):
 
@@ -162,6 +170,7 @@ def perform_fft(input_info):
 
         if False in data_mat_v_nan:
             try:
+
                 # interpolate on that spots
                 data_mat_v_interp = numpy.round(
                     numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:, i][data_mat_v_nan]))
@@ -182,63 +191,64 @@ def perform_fft(input_info):
                 f_hat = indices * f_hat
                 ffilt = numpy.fft.ifft(f_hat)
 
-                if i <= 3:
-                    print("i == %d" % i)
-                    print("data mat: ", data_mat[:, i])
-                    print("data_mat_v_interp", data_mat_v_interp)
+                if plot:
+                    if i <= 3:
+                        print("proces nr %d i == %d" % (input_info["process_nr"], i))
+                        print("data mat: ", data_mat[:, i])
+                        print("data_mat_v_interp", data_mat_v_interp)
 
-                    # print("data mat:", data_mat[:, i])
-                    # print("data_mat.dtype: ", data_mat.dtype)
-                    # print("data_mat_interp.dtype: ", data_mat_v_interp.dtype)
-                    ffilt = numpy.round(ffilt).astype(numpy.int16)
-                    # print("\ntransfrom to int16: ", data_mat_v_interp)
-                    # print("\ndata_mat_interp.dtype: ", data_mat_v_interp.dtype)
-                    data_mat[:, i] = ffilt
-                    fig, axs = plt.subplots(3, 1)
+                        # print("data mat:", data_mat[:, i])
+                        # print("data_mat.dtype: ", data_mat.dtype)
+                        # print("data_mat_interp.dtype: ", data_mat_v_interp.dtype)
+                        ffilt = numpy.round(ffilt).astype(numpy.int16)
+                        # print("\ntransfrom to int16: ", data_mat_v_interp)
+                        # print("\ndata_mat_interp.dtype: ", data_mat_v_interp.dtype)
+                        data_mat[:, i] = ffilt
+                        fig, axs = plt.subplots(3, 1)
 
-                    good_qual = numpy.where(qual_mat[:,i] == qual_weights[0], qual_weights[0], numpy.nan) * qual_factor
-                    okay_qual = numpy.where(qual_mat[:,i] == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
-                    bad_qual = numpy.where(qual_mat[:,i] == qual_weights[2], qual_weights[2], numpy.nan) * qual_factor
-                    really_bad_qual = numpy.where(qual_mat[:,i] == qual_weights[3], qual_weights[3],
-                                                  numpy.nan) * qual_factor
+                        good_qual = numpy.where(qual_mat[:,i] == qual_weights[0], qual_weights[0], numpy.nan) * qual_factor
+                        okay_qual = numpy.where(qual_mat[:,i] == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
+                        bad_qual = numpy.where(qual_mat[:,i] == qual_weights[2], qual_weights[2], numpy.nan) * qual_factor
+                        really_bad_qual = numpy.where(qual_mat[:,i] == qual_weights[3], qual_weights[3],
+                                                      numpy.nan) * qual_factor
 
-                    plt.sca(axs[0])
-                    plt.plot(t, data_mat[:, i], color='c', LineWidth=3, label="raw data")
-                    plt.plot(t, data_mat_v_interp, color='k', LineWidth=1, linestyle='--',
-                             label='lin interp')
-                    plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
+                        plt.sca(axs[0])
+                        plt.plot(t, data_mat[:, i], color='c', LineWidth=3, label="raw data")
+                        plt.plot(t, data_mat_v_interp, color='k', LineWidth=1, linestyle='--',
+                                 label='lin interp')
+                        plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
 
-                    plt.plot(t, good_qual, 'go', label="Good Quality")
-                    plt.plot(t, okay_qual, 'yo', label="Okay Quality")
-                    plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
-                    plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+                        plt.plot(t, good_qual, 'go', label="Good Quality")
+                        plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+                        plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+                        plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
 
-                    plt.xlim(t[0], t[-1])
-                    plt.ylabel("Intensity [%]")
-                    plt.xlabel("Time [days]")
-                    plt.legend()
+                        plt.xlim(t[0], t[-1])
+                        plt.ylabel("Intensity [%]")
+                        plt.xlabel("Time [days]")
+                        plt.legend()
 
-                    plt.sca(axs[1])
-                    plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
-                    plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
-                    plt.plot(t[0], t[-1])
-                    plt.xlabel("Power Spectrum [Hz]")
-                    plt.ylabel("Power")
-                    plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value,
-                                                                                         numpy.nanmean(power_spectrum)))
+                        plt.sca(axs[1])
+                        plt.plot(t, power_spectrum, color="c", LineWidth=2, label="Noisy")
+                        plt.plot(t, power_spectrum, 'b*', LineWidth=2, label="Noisy")
+                        plt.plot(t[0], t[-1])
+                        plt.xlabel("Power Spectrum [Hz]")
+                        plt.ylabel("Power")
+                        plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value,
+                                                                                             numpy.nanmean(power_spectrum)))
 
-                    plt.sca(axs[2])
-                    plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
-                    plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
-                    plt.plot(t[0], t[-1])
-                    plt.xlabel("Power Spectrum no max [Hz]")
-                    plt.ylabel("Power")
-                    plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(
-                        max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
+                        plt.sca(axs[2])
+                        plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
+                        plt.plot(t, power_spec_no_max, 'b*', LineWidth=2, label="Noisy")
+                        plt.plot(t[0], t[-1])
+                        plt.xlabel("Power Spectrum no max [Hz]")
+                        plt.ylabel("Power")
+                        plt.title("Power Spectrum Analysis - removed big max {} - Max: {} - Threshold: {}".format(
+                            max_fft_spectr_value, numpy.nanmax(power_spec_no_max), threshold_remaining_values))
 
-                    # plot data
-                    plt.show()
-                    continue
+                        # plot data
+                        plt.show()
+
 
                 data_mat[:, i] = ffilt
             except:
@@ -250,7 +260,8 @@ def perform_fft(input_info):
     # transorm float64 back to INT16!!
     # save interpolation results on the shared memory object
     reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
-    existing_shm_qual.close()
+    if plot:
+        existing_shm_qual.close()
     existing_shm.close()
 def multi_fft(job_list):
 
