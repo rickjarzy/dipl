@@ -138,6 +138,7 @@ if __name__ == "__main__":
 
                         break
 
+                        #todo: write out entire year in a function
                         # write output raster
                         #write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
@@ -158,7 +159,7 @@ if __name__ == "__main__":
 
                     else:
                         try:
-                            #todo: update data and qual information
+                            #todo: update data and qual information for an entire year
                             data_block, qual_block, noup_array, fitted_raster_band_name, iv, l_max, l_min = update_data_block_numpy(data_block, qual_block, noup_array, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, center, half_window, fit_nr, ts, weights, name_weights_addition)
 
 
