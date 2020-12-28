@@ -190,7 +190,7 @@ def perform_fft(input_info, plot=False):
                 indices = power_spectrum > threshold_remaining_values
                 f_hat = indices * f_hat
                 ffilt = numpy.fft.ifft(f_hat)
-
+                data_mat[:, i] = ffilt
                 if plot:
                     if i <= 3:
                         print("proces nr %d i == %d" % (input_info["process_nr"], i))
@@ -250,7 +250,7 @@ def perform_fft(input_info, plot=False):
                         plt.show()
 
 
-                data_mat[:, i] = ffilt
+
             except:
                 break
 
@@ -260,9 +260,9 @@ def perform_fft(input_info, plot=False):
     # transorm float64 back to INT16!!
     # save interpolation results on the shared memory object
     reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
-    if plot:
-        existing_shm_qual.close()
-    existing_shm.close()
+    #if plot:
+        #existing_shm_qual.close()
+    #existing_shm.close()
 def multi_fft(job_list):
 
     with multiprocessing.Pool() as pool:
