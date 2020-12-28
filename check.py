@@ -1,5 +1,7 @@
 import torch
 import numpy
+import os
+import glob
 from time import time
 
 def calc_numpy():
@@ -121,7 +123,17 @@ if __name__ == "__main__":
 
     start = time()
     #calc_cuda()
-    calc_numpy()
+    #calc_numpy()
+
+    os.chdir(r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A4/h18v04")
+    list_tif = sorted(glob.glob("MCD43A4.*.band_1.tif"))[39:-14]
+    sg_window = 46
+    print("len list: ", len(list_tif))
+    for ts in range(0,len(list_tif), sg_window):
+        print(ts)
+        print("data\n")
+        print("len of year: ", len(list_tif[ts:ts+sg_window]))
+        print(list_tif[ts:ts+sg_window])
 
     print("time elapsed: ", time()-start, " [sec]")
     print("Programm ENDE")

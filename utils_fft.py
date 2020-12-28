@@ -3,7 +3,7 @@ import glob
 import numpy
 import multiprocessing
 from multiprocessing import shared_memory
-from osgeo import gdal
+from osgeo import gdal, gdalconst
 from matplotlib import pyplot as plt
 
 
@@ -26,7 +26,7 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-def init_data_block_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
+def init_data_block_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info):
 
     """
     Creates a initial datablock for the modis data and returns a numpy ndim array
@@ -58,7 +58,7 @@ def init_data_block_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, 
     qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm_qual.buf)
 
     print("\n# START READING SATDATA for BAND {}".format(band))
-    for i in range(0, sg_window, 1):
+    for i in range(0, len(list_data), 1):
 
         # load qual file
         try:
@@ -79,51 +79,50 @@ def init_data_block_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, 
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = data_ras.ReadAsArray()
 
-            # collect epochs raster name
-            if fit_nr == i:
-                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[i])))
-
-                fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
-
             del data_ras
 
         except Exception as ErrorRasterDataReading:
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
     print("data_block from readout: ", data_block[:,2000,100])
-    return data_block, qual_block, fitted_raster_band_name, shm, shm_qual
+    return data_block, qual_block, shm, shm_qual
 
-def update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts, weights, name_weights_addition):
+def update_data_block_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data, weights):
 
-    # update datablock
-    # -----------------
-    data_block[0:-1, :, :] = data_block[1:, :, :]
-    print("# UPDATE Ras Data File: ", list_data[sg_window-1 + ts])
+    # iter through data and qual list
+    for i in range(0, len(list_data), 1):
+        try:
 
-    ras_data_new = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window-1 + ts])).ReadAsArray()
-    data_block[sg_window-1, :, :] = ras_data_new
+            # update datablock
+            # -----------------
+            print("# UPDATE Ras Data File: ", list_data[i])
+            data_block[i, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i])).ReadAsArray()
 
-    # update qualblock
-    # ----------------
-    qual_block[0:-1, :, :] = qual_block[1:, :, :]
-    print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts])
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while updateing satellite raster block:\n {}".format(ErrorQualRasReading))
 
-    qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window-1 + ts])).ReadAsArray()
+        try:
 
+            # update qualblock
+            # ----------------
+            print("# UPDATE Qual Data File: ", list_qual[i])
+            qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i])).ReadAsArray()
 
-    # update weights
-    qual_data_new = numpy.where(qual_data_new == 0, weights[0], qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 1, weights[1], qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
-    qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
+            # update weights
+            qual_data_new = numpy.where(qual_data_new == 0, weights[0], qual_data_new)
+            qual_data_new = numpy.where(qual_data_new == 1, weights[1], qual_data_new)
+            qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
+            qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
-    qual_data_new[qual_data_new == 255] = numpy.nan
+            #qual_data_new[qual_data_new == 255] = numpy.nan
 
-    qual_block[sg_window - 1, :, :] = qual_data_new
+            qual_block[i, :, :] = qual_data_new
+            del qual_data_new
 
-    fitted_raster_band_name = list_data[fit_nr + ts][:-4] + name_weights_addition % str(sg_window)
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while updateing quality raster block:\n {}".format(ErrorQualRasReading))
 
-    return data_block, qual_block, fitted_raster_band_name
+    return data_block, qual_block
 
 
 def perform_fft(input_info, plot=False):
@@ -154,6 +153,7 @@ def perform_fft(input_info, plot=False):
         qual_factor = 1
         qual_mat = reference_to_qual_block.reshape(reference_to_qual_block.shape[0],
                                                    reference_to_qual_block.shape[1] * reference_to_qual_block.shape[2])
+        qual_mat[qual_mat == 255] = numpy.nan
 
     print("Data Mat Shape", data_mat.shape)
 
@@ -267,3 +267,27 @@ def multi_fft(job_list):
 
     with multiprocessing.Pool() as pool:
         pool.map(perform_fft, job_list)
+
+def write_fitted_raster_to_disk_fft(data_block, list_data_names, out_dir_fit, tile, master_raster_info, name_weights_addition):
+
+    # set negative values to nan value of 32767
+    data_block[data_block < 0] = 32767
+    data_block[data_block > 9999] = 9999
+
+    for i in range(0, len(list_data_names), 1):
+
+        # write output raster
+        print("- Fitlayer stats: ", data_block.shape)
+        out_ras_name = os.path.join(out_dir_fit, tile, list_data_names[i][:-4]+name_weights_addition)
+        print("- Writing file : ", out_ras_name)
+
+        #master_raster_info[-1] holds the driver for the file to create
+        out_ras = master_raster_info[-1].Create(out_ras_name, master_raster_info[2], master_raster_info[3], 1,
+                                                gdalconst.GDT_Int16, options=['COMPRESS=LZW'])
+        out_band = out_ras.GetRasterBand(1)
+        out_band.WriteArray(data_block[i, :, :])
+        out_band.SetNoDataValue(32767)
+        out_ras.SetGeoTransform(master_raster_info[0])
+        out_ras.SetProjection(master_raster_info[1])
+        out_ras.FlushCache()
+        del out_ras, out_band, out_ras_name
