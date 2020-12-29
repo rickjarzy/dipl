@@ -172,8 +172,9 @@ def perform_fft(input_info, plot=False):
             try:
 
                 # interpolate on that spots
-                data_mat_v_interp = numpy.round(
-                    numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:, i][data_mat_v_nan]))
+                data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t,
+                                                             data_mat_v_t[data_mat_v_nan],
+                                                             data_mat[:, i][data_mat_v_nan]))
 
                 # calculate the fft
                 f_hat = numpy.fft.fft(data_mat_v_interp, n)
@@ -190,7 +191,7 @@ def perform_fft(input_info, plot=False):
                 indices = power_spectrum > threshold_remaining_values
                 f_hat = indices * f_hat
                 ffilt = numpy.fft.ifft(f_hat)
-                data_mat[:, i] = ffilt
+
                 if plot:
                     if i <= 3:
                         print("proces nr %d i == %d" % (input_info["process_nr"], i))
@@ -203,25 +204,24 @@ def perform_fft(input_info, plot=False):
                         ffilt = numpy.round(ffilt).astype(numpy.int16)
                         # print("\ntransfrom to int16: ", data_mat_v_interp)
                         # print("\ndata_mat_interp.dtype: ", data_mat_v_interp.dtype)
-                        data_mat[:, i] = ffilt
                         fig, axs = plt.subplots(3, 1)
 
-                        good_qual = numpy.where(qual_mat[:,i] == qual_weights[0], qual_weights[0], numpy.nan) * qual_factor
-                        okay_qual = numpy.where(qual_mat[:,i] == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
-                        bad_qual = numpy.where(qual_mat[:,i] == qual_weights[2], qual_weights[2], numpy.nan) * qual_factor
-                        really_bad_qual = numpy.where(qual_mat[:,i] == qual_weights[3], qual_weights[3],
-                                                      numpy.nan) * qual_factor
+                        good_qual = numpy.where(qual_mat[:, i] == qual_weights[0], qual_weights[0], numpy.nan) * qual_factor
+                        okay_qual = numpy.where(qual_mat[:, i] == qual_weights[1], qual_weights[1], numpy.nan) * qual_factor
+                        bad_qual = numpy.where(qual_mat[:, i] == qual_weights[2], qual_weights[2], numpy.nan) * qual_factor
+                        really_bad_qual = numpy.where(qual_mat[:, i] == qual_weights[3], qual_weights[3],numpy.nan) * qual_factor
+                        nan_values = numpy.where(qual_mat[:, i] == 255, qual_weights[3],numpy.nan )
 
                         plt.sca(axs[0])
                         plt.plot(t, data_mat[:, i], color='c', LineWidth=3, label="raw data")
-                        plt.plot(t, data_mat_v_interp, color='k', LineWidth=1, linestyle='--',
-                                 label='lin interp')
+                        plt.plot(t, data_mat_v_interp, color='k', LineWidth=1, linestyle='--', label='lin interp')
                         plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
 
                         plt.plot(t, good_qual, 'go', label="Good Quality")
                         plt.plot(t, okay_qual, 'yo', label="Okay Quality")
                         plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
                         plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+                        plt.plot(t, nan_values, 'ko', label="NaN Values")
 
                         plt.xlim(t[0], t[-1])
                         plt.ylabel("Intensity [%]")
@@ -235,7 +235,8 @@ def perform_fft(input_info, plot=False):
                         plt.xlabel("Power Spectrum [Hz]")
                         plt.ylabel("Power")
                         plt.title("Power Spectrum Analyses - Max: {} - Threshold: {}".format(max_fft_spectr_value,
-                                                                                             numpy.nanmean(power_spectrum)))
+                                                                                             numpy.nanmean(
+                                                                                                 power_spectrum)))
 
                         plt.sca(axs[2])
                         plt.plot(t, power_spec_no_max, color="c", LineWidth=2, label="Noisy")
@@ -249,13 +250,33 @@ def perform_fft(input_info, plot=False):
                         # plot data
                         plt.show()
 
-
+                data_mat[:, i] = ffilt
 
             except:
-                break
+                # gets triggered most if there are only nans in the array
+                print("### Error in MP process %s"%input_info["process_nr"])
+                print(data_mat_v_nan)
+                continue
 
         else:
-            pass
+            # calculate the fft
+            f_hat = numpy.fft.fft(data_mat_v_interp, n)
+            # and the power spectrum - which frequencies are dominant
+            power_spectrum = f_hat * numpy.conj(f_hat) / n
+
+            # get the max power value
+            max_fft_spectr_value = numpy.max(power_spectrum)
+            # set it to zeros so one can find those frequencies that are far lower and important but still no noise
+            power_spec_no_max = numpy.where(power_spectrum == max_fft_spectr_value, 0, power_spectrum)
+
+            threshold_remaining_values = numpy.nanmax(power_spec_no_max) / 2
+
+            indices = power_spectrum > threshold_remaining_values
+            f_hat = indices * f_hat
+            ffilt = numpy.fft.ifft(f_hat)
+            data_mat[:, i] = ffilt
+
+
 
     # transorm float64 back to INT16!!
     # save interpolation results on the shared memory object

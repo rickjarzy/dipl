@@ -186,16 +186,7 @@ def multi_lin_interp_process(input_info):
             try:
 
                 data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
-                f_hat = numpy.fft.fft(data_mat_v_interp, n)
-                power_spectrum = f_hat * numpy.conj(f_hat) / n
-                max_fft_spectr_value = numpy.max(power_spectrum)
-                power_spec_no_max = numpy.where(power_spectrum == max_fft_spectr_value, 0, power_spectrum)
 
-                threshold_remaining_values = numpy.nanmax(power_spec_no_max) / 2
-
-                indices = power_spectrum > threshold_remaining_values
-                f_hat = indices * f_hat
-                ffilt = numpy.fft.ifft(f_hat)
 
                 if i == 0:
                     print("i == 0")
@@ -213,7 +204,7 @@ def multi_lin_interp_process(input_info):
 
                 data_mat[:, i] = data_mat_v_interp
             except:
-                break
+                continue
 
         else:
             pass
