@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
         weights = [1, 2, 3, 3]
 
-        name_weights_addition = ".fft_sg_%s.tif"
+        name_weights_addition = ".single_fft_sg_%s.tif"
 
         calc_from_to = [0, 355]                #39 = 2000057 -  =
 
