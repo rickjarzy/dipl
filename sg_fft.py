@@ -155,7 +155,7 @@ if __name__ == "__main__":
                         try:
 
                             data_block, qual_block, fitted_raster_band_name = update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs,
-                                                                           tile, list_qual, list_data, sg_window, fit_nr, ts, name_weights_addition, weights)
+                                                                           tile, list_qual, list_data, sg_window, ts, fit_nr, name_weights_addition, weights)
 
                             print("\nStart fitting FFT year block - Nr %d out of %d \n-------------------------------------------" % ( ts, len_list_data/sg_window))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
