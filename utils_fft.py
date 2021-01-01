@@ -124,6 +124,116 @@ def update_data_block_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, li
 
     return data_block, qual_block
 
+def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, fit_nr, name_weights_addition,  master_raster_info):
+
+    """
+
+    Parameters
+    ----------
+    sg_window
+    band
+    in_dir_qs
+    in_dir_tf
+    tile
+    list_qual
+    list_data
+    num_ob_buf_bytes
+    fit_nr
+    name_weights_addition
+    master_raster_info
+
+    Returns
+    -------
+
+    """
+
+    #data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+
+    shm = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
+    data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm.buf)
+
+    shm_qual = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
+    qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm_qual.buf)
+
+    print("\n# START READING SATDATA for BAND {}".format(band))
+    for i in range(0, sg_window, 1):
+
+        # load qual file
+        try:
+            qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
+
+            print("# load qual data for band %d: %s" % (band, list_qual[i]))
+            qual_block[i, :, :] = qual_ras.ReadAsArray()
+
+            del qual_ras
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+        # load satellite data
+        try:
+            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+
+            print("# load sat data for band %s: %s" % (str(band), list_data[i]))
+            #data_band = data_ras.GetRasterBand(1)
+            data_block[i, :, :] = data_ras.ReadAsArray()
+
+            # collect epochs raster name
+            if fit_nr == i:
+                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[i])))
+
+                fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
+
+            del data_ras
+
+        except Exception as ErrorRasterDataReading:
+            print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+
+    print("data_block from readout: ", data_block[:,2000,100])
+    return data_block, qual_block, shm, shm_qual, fitted_raster_band_name
+
+
+def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data,sg_window, ts_epoch, fit_nr, name_weights_addition, weights):
+
+    try:
+
+        # update datablock
+        # -----------------
+        data_block[0:-1, :, :] = data_block[1:, :, :]
+        print("# UPDATE Ras Data File: ", list_data[sg_window - 1 + ts_epoch])
+
+        data_block[sg_window - 1, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window - 1 + ts_epoch])).ReadAsArray()
+
+    except Exception as ErrorQualRasReading:
+        print("### ERROR while updateing satellite raster block:\n {}".format(ErrorQualRasReading))
+
+    try:
+
+        # update qualblock
+        # ----------------
+        print("# UPDATE Qual Data File: ", list_qual[sg_window - 1 + ts_epoch])
+        qual_block[0:-1, :, :] = qual_block[1:, :, :]
+
+
+        qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[sg_window - 1 + ts_epoch])).ReadAsArray()
+
+        # update weights
+        qual_data_new = numpy.where(qual_data_new == 0, weights[0], qual_data_new)
+        qual_data_new = numpy.where(qual_data_new == 1, weights[1], qual_data_new)
+        qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
+        qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
+
+        #qual_data_new[qual_data_new == 255] = numpy.nan
+
+        qual_block[sg_window - 1, :, :] = qual_data_new
+
+        fitted_raster_band_name = list_data[fit_nr + ts_epoch][:-4] + name_weights_addition % str(sg_window)
+
+        del qual_data_new
+
+    except Exception as ErrorQualRasReading:
+        print("### ERROR while updateing quality raster block:\n {}".format(ErrorQualRasReading))
+
+    return data_block, qual_block, fitted_raster_band_name
+
 
 def perform_fft(input_info, plot=False):
 
@@ -254,15 +364,11 @@ def perform_fft(input_info, plot=False):
 
             except:
                 # gets triggered most if there are only nans in the array
-                #print("### Error in MP process %s"%input_info["process_nr"])
-                #print(data_mat_v_nan)
-                #print(numpy.array([32767]*orig_time))
-                data_mat[:, i] = numpy.array([32767]*orig_time)
                 continue
 
         else:
             # calculate the fft
-            f_hat = numpy.fft.fft(data_mat_v_interp, n)
+            f_hat = numpy.fft.fft(data_mat[:, i], n)
             # and the power spectrum - which frequencies are dominant
             power_spectrum = f_hat * numpy.conj(f_hat) / n
 
