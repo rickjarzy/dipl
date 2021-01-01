@@ -254,8 +254,10 @@ def perform_fft(input_info, plot=False):
 
             except:
                 # gets triggered most if there are only nans in the array
-                print("### Error in MP process %s"%input_info["process_nr"])
-                print(data_mat_v_nan)
+                #print("### Error in MP process %s"%input_info["process_nr"])
+                #print(data_mat_v_nan)
+                #print(numpy.array([32767]*orig_time))
+                data_mat[:, i] = numpy.array([32767]*orig_time)
                 continue
 
         else:
