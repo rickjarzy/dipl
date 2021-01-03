@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
         weights = [1, 2, 3, 3]
 
-        name_weights_addition = ".single_fft_sg_%s.tif"
+        name_weights_addition = ".double_fft_sg_%s.tif"
 
-        calc_from_to = [0, 355]                #39 = 2000057 -  =
+        calc_from_to = [0, 17]                # 355 == 2008
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -142,6 +142,10 @@ if __name__ == "__main__":
                             cou += 1
 
                         multi_fft(job_list_with_data_inidzes)
+
+                        print("Start Second FFT Run ...")
+                        multi_fft(job_list_with_data_inidzes)
+
                         print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
 
                         write_fitted_raster_to_disk(data_block[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
@@ -177,6 +181,10 @@ if __name__ == "__main__":
                                 cou += 1
 
                             multi_fft(job_list_with_data_inidzes)
+
+                            print("Start Second FFT Run ...")
+                            multi_fft(job_list_with_data_inidzes)
+
                             print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
 
                             # write output raster
