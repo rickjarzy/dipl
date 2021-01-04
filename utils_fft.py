@@ -124,7 +124,7 @@ def update_data_block_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, li
 
     return data_block, qual_block
 
-def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, fit_nr, name_weights_addition,  master_raster_info):
+def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, fit_nr, name_weights_addition,  master_raster_info, poly=False):
 
     """
 
@@ -148,12 +148,15 @@ def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qua
     """
 
     #data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
-
     shm = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
-    data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm.buf)
-
     shm_qual = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
-    qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm_qual.buf)
+    if poly:
+        data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.float64, buffer=shm.buf)
+        qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.float64, buffer=shm_qual.buf)
+    else:
+
+        data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm.buf)
+        qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm_qual.buf)
 
     print("\n# START READING SATDATA for BAND {}".format(band))
     for i in range(0, sg_window, 1):
@@ -191,12 +194,12 @@ def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qua
     return data_block, qual_block, shm, shm_qual, fitted_raster_band_name
 
 
-def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data,sg_window, ts_epoch, fit_nr, name_weights_addition, weights):
+def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data, sg_window, ts_epoch, fit_nr, name_weights_addition, weights, poly=False):
 
     try:
 
-        # update datablock
-        # -----------------
+    # update datablock
+    # -----------------
         data_block[0:-1, :, :] = data_block[1:, :, :]
         print("# UPDATE Ras Data File: ", list_data[sg_window - 1 + ts_epoch])
 
@@ -221,7 +224,8 @@ def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile,
         qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
         qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
-        #qual_data_new[qual_data_new == 255] = numpy.nan
+        if poly:
+            qual_data_new[qual_data_new == 255] = numpy.nan
 
         qual_block[sg_window - 1, :, :] = qual_data_new
 
@@ -239,9 +243,20 @@ def perform_fft(input_info, plot=False):
 
 
     print("\nspawn FFT process nr : ", input_info["process_nr"])
-    # get data to process out of buffer
+
     existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
-    reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
+
+    # check if poly calculation is on to be executed, because then there must be an additional key in the dictionary
+    if "poly" in input_info.keys():
+        poly = True
+        reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.float, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
+    else:
+        poly = False
+        reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
+
+    # get data to process out of buffer
+
+
     print("ref data dtype: ", reference_to_data_block.dtype)
     print("\n")
 
@@ -257,8 +272,11 @@ def perform_fft(input_info, plot=False):
     # if plots are whished
     if plot:
         existing_shm_qual = shared_memory.SharedMemory(name=input_info["shm_qual"].name)
-        reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:,
-                                  input_info["from"]:input_info["to"], :]
+        if poly:
+            reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.float64, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
+        else:
+            reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
+
         qual_weights = input_info["weights"]
         qual_factor = 1
         qual_mat = reference_to_qual_block.reshape(reference_to_qual_block.shape[0],
@@ -388,7 +406,10 @@ def perform_fft(input_info, plot=False):
 
     # transorm float64 back to INT16!!
     # save interpolation results on the shared memory object
-    reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
+    if poly:
+        reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols))
+    else:
+        reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
     #if plot:
         #existing_shm_qual.close()
     #existing_shm.close()

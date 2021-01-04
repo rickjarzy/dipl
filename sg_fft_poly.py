@@ -6,6 +6,7 @@ import time
 import socket
 import numpy
 from utils_numpy import write_fitted_raster_to_disk
+from utils_mp import additional_stat_info_raster_mp, fitq_mp
 from utils_fft import init_data_block_sg_fft, get_master_raster_info, multi_fft, update_data_block_sg_fft
 import fit_config
 
@@ -75,11 +76,11 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 2, 3, 3]
+        weights = [1, 0.5, 0.01, 0.01]
 
-        name_weights_addition = ".double_fft_sg_%s.tif"
+        name_weights_addition = ".sg_%s_fft_poly.tif"
 
-        calc_from_to = [0, 355]                # 355 == 2008
+        calc_from_to = [0, 17]                #39 = 2000057 -  =
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -109,7 +110,6 @@ if __name__ == "__main__":
                 for ts in range(0, len_list_data, 1):
                     epoch_start = time.time()
 
-
                     if ts == 0:
                         #try:
                         # Initialize data fitting -load satellite data into data blocks
@@ -117,12 +117,16 @@ if __name__ == "__main__":
 
                         data_block, qual_block, shm, shm_qual, fitted_raster_band_name = init_data_block_sg_fft(sg_window, b, in_dir_qs, in_dir_tf,
                                                                                     tile, list_qual, list_data,
-                                                                                    num_of_buf_bytes,fit_nr, name_weights_addition, master_raster_info)
+                                                                                    num_of_buf_bytes,fit_nr, name_weights_addition, master_raster_info, poly=True)
+
+                        qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
                         print("\nStart fitting FFT SG block - Nr %d out of %d \n-------------------------------------------" % (ts, len_list_data))
                         print("Shape Datablock: ", data_block.shape)
-                        # FFT Logic Here
+                        print("Datablock type: ", data_block.dtype)
 
+                        # FFT Fit
+                        # =======
                         job_list_with_data_inidzes = []  # for mp pool
                         cou = 0
                         start_interp_time = time.time()
@@ -133,16 +137,44 @@ if __name__ == "__main__":
                             info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm,
                                          "process_nr": cou, "shm_qual": shm_qual, "weights": weights,
                                          "dim": (sg_window, master_raster_info[2], master_raster_info[3]),
-                                         "num_of_bytes": num_of_buf_bytes}
+                                         "num_of_bytes": num_of_buf_bytes, "poly":True}
                             job_list_with_data_inidzes.append(info_dict)
                             cou += 1
 
                         multi_fft(job_list_with_data_inidzes)
-
-                        print("Start Second FFT Run ...")
-                        multi_fft(job_list_with_data_inidzes)
-
                         print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
+                        time.sleep(2)
+                        print("Datablock type: ", data_block.dtype)
+                        # Poly Fit 1
+                        # ==========
+                        print("Start Poly Fit #1 ...")
+                        # set 32767 values to numpy.nan
+                        data_block[data_block == 32767] = numpy.nan
+
+                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
+                        print("Datablock type: ", fit.dtype)
+                        data_block[:] = fit
+                        del fit
+
+                        # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                        #               qual_block[:, plot_indizess[0], plot_indizess[1]],
+                        #               weights,
+                        #               fit[:, plot_indizess[0], plot_indizess[1]])
+
+                        # varianz update
+
+                        sigm = sigm * sig
+                        qual_block_nu = sigm / delta_lv
+
+                        # Poly Fit 2
+                        # ==========
+                        print("Start Poly Fit #2 ...")
+                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block_nu, A, sg_window)
+                        data_block[:] = fit
+                        del fit
+
+                        sigm = sigm ** 0  # set back to ones
+                        del delta_lv
 
                         write_fitted_raster_to_disk(data_block[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
                         # except Exception as BrokenFirstIteration:
@@ -150,6 +182,7 @@ if __name__ == "__main__":
                         #     shm.unlink()
                         #     shm_qual.unlink()
                         #     break
+                        print("finished FFT - Poly - Poly in ", time.time() - start_interp_time, " [sec] ")
 
                     else:
                         try:
@@ -172,21 +205,48 @@ if __name__ == "__main__":
                                 info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm,
                                              "process_nr": cou, "shm_qual": shm_qual, "weights": weights,
                                              "dim": (sg_window, master_raster_info[2], master_raster_info[3]),
-                                             "num_of_bytes": num_of_buf_bytes}
+                                             "num_of_bytes": num_of_buf_bytes, "poly":True}
                                 job_list_with_data_inidzes.append(info_dict)
                                 cou += 1
 
                             multi_fft(job_list_with_data_inidzes)
-
-                            print("Start Second FFT Run ...")
-                            multi_fft(job_list_with_data_inidzes)
-
+                            time.sleep(2)
                             print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
+
+                            # Poly Fit 1
+                            # ==========
+
+                            # set 32767 values to numpy.nan
+                            data_block[data_block == 32767] = numpy.nan
+                            print("Start Poly Fit #1 ...")
+                            [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
+                            data_block[:] = fit
+                            del fit
+
+                            # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                            #               qual_block[:, plot_indizess[0], plot_indizess[1]],
+                            #               weights,
+                            #               fit[:, plot_indizess[0], plot_indizess[1]])
+
+                            # varianz update
+
+                            sigm = sigm * sig
+                            qual_block_nu = sigm / delta_lv
+
+                            # Poly Fit 2
+                            # ==========
+                            print("Start Poly Fit #2 ...")
+                            [fit, sig, delta_lv] = fitq_mp(data_block, qual_block_nu, A, sg_window)
+                            data_block[:] = fit
+                            del fit
+
+                            sigm = sigm ** 0  # set back to ones
+                            del delta_lv
 
                             # write output raster
                             write_fitted_raster_to_disk(data_block[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
 
-                            print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
+                            print("finished FFT - Poly - Poly in ", time.time() - start_interp_time, " [sec] ")
 
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
