@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
         name_weights_addition = ".sg_%s_fft_poly.tif"
 
-        calc_from_to = [0, 17]                #39 = 2000057 -  =
+        calc_from_to = [0, 355]                #39 = 2000057 -  =
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
