@@ -132,7 +132,7 @@ for shp in range(0,len(shpPoiKoords),1):
         qalValues[e]=ReadOutSatData(qalData[e],VisBand,shp_x,shp_y)
         
             
-    # umkehr der qualitätsinfo --->255=0, 1=100, 0 == 200
+    # umkehr der qualitï¿½tsinfo --->255=0, 1=100, 0 == 200
     qalGut = numpy.where(qalValues==0,500,None)
     qalMit = numpy.where(qalValues==1,250,None)
     qalShl = numpy.where(qalValues==255,100,None)
@@ -165,14 +165,6 @@ for shp in range(0,len(shpPoiKoords),1):
     plt.show()
     figName = os.path.join(plotsDir, figTitle + "_" + band )
     fignr1.savefig(figName, dpi=300)
-    
-    
-        
-        
-    
-
-
-
 
 
 print "Programm ENDE"
