@@ -21,12 +21,20 @@
 # TS
 # ========================================
 
+# todo: select a year by index
+# todo: select different calculations from fit
+# todo: select corresponding raw data for same time periode
+# todo: create first plot with
 
 import os
 import glob
 import time
 import socket
 import numpy
+
+from fit_information import fit_info_all, fit_info_poly, fit_info_fft
+
+
 
 def main():
 
@@ -65,20 +73,40 @@ if __name__ == "__main__":
     sat_qual_indir = in_dir_qs
     sat_fitted_indir = out_dir_fit
 
-    doy = [doy for doy in range(1,365,8)]
-    print("doy: ", doy)
 
+    doy_full = [doy for doy in range(1,365,8)]
+    doy_57 = [doy for doy in range(57,365,8)]
+    doy_113 = [doy for doy in range(113,365,8)]
+
+    nr_msing_doy_indizes = doy_full[0:min(doy_57)]
+
+    print("doy_full:\t", len(doy_full))
+    print("doy_57:\t\t", len(doy_57))
+    print("doy_113:\t", len(doy_113))
+    print("doy_msing:\t", len(nr_msing_doy_indizes))
 
     user_year = 2004
 
-    # the fitted time series starts with 2000113
-    epoch_num_begin_raw_index = 7 #2000057 - index
-    epoch_num_begin_fit = 0 #2000113
+    ts_raw_base_index = len(doy_57)           # this is the index where the year 2001 epoch starts in the data_lists for the bands
+    ts_raw_end_index = ts_raw_base_index + len(doy_full)
 
-    os.chdir(os.path.join(out_dir_fit, tile))
+    ts_fit_base_indes = len(doy_113)*
+    ts_fit_end_index = ts_fit_base_indes + len(doy_full)
 
-    fit_tif_list = glob.glob("*.tif")
+    # get into raw dir and select year001
+    os.chdir(os.path.join(in_dir_tf, tile))
+    raw_data_list_band1 = sorted(glob.glob("*.band_1.tif"))
 
-    print("len of fit_tif_list: ", len(fit_tif_list))
+    # get into  fit dir and select year001
+    os.chdir(os.path.join(out_dir_fit,tile))
+
+
+    for fit_product in fit_info_fft.keys():
+        print("Fit Product: ", fit_product)
+        fit_info_fft[fit_product]["files_list"] = sorted(glob.glob("*.band_1.sg_15_fft_poly.tif"))
+
+    print("len band_1 ras list: ", len(raw_data_list_band1))
+    print("Raster RAW 2001001: ", raw_data_list_band1[ts_raw_base_index])
+    print("Raster Fit 2001001: ", fit_data_list_band1[ts_fit_base_indes] )
 
     print("Programm ENDE")

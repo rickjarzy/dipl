@@ -9,12 +9,7 @@ from utils_numpy import write_fitted_raster_to_disk
 from utils_fft import init_data_block_sg_fft, get_master_raster_info, multi_fft, update_data_block_sg_fft
 import fit_config
 
-"""
 
-ATTENTION - THIS SOFTWARE FITS FOR AN ENTIRE YEAR!!!!!!
-
-
-"""
 if __name__ == "__main__":
     try:
         start = time.time()
