@@ -17,7 +17,7 @@ doy_factors = {}
 # ----------------------------------------------------------------------------------------------------------------------
 fit_info_all["double_fft_sg_15"] = {"algo_desc": "calculates twice a FFT using a SQ window of 15 days", "weights":"no", "files_list":[]}
 fit_info_all["single_fft_sg_15"] = {"algo_desc": "calculates a single FFT over a SG window of 15 days", "weights":"no", "files_list":[]}
-fit_info_all["fft_sg_15"] = {"algo_desc": " calculates a FFT over a SG window of 15 days", "weights":"no", "files_list":[]}
+#fit_info_all["fft_sg_15"] = {"algo_desc": " calculates a FFT over a SG window of 15 days", "weights":"no", "files_list":[]}
 fit_info_all["sg_15_fft_poly"] = {"algo_desc":"calculates a FFT first and then calculates a Poly Fit twice in a SG window of 15 days", "weights":"yes", "files_list":[]}
 
 fit_info_all["fft"] = {"algo_desc":"calculates a single FFT over an entire year - 46 epochs - recalculates the values via FFT and writes out each file of the year new", "weights":"no", "files_list":[]}

@@ -31,6 +31,7 @@ import glob
 import time
 import socket
 import numpy
+import copy
 
 from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
@@ -53,8 +54,8 @@ def read_out_modis_values(epochs_path_list, shp_koords_list, root_dir=False):
     """
 
     print("\nREAD OUT SAT DATA\n====================")
-    print("shp koords: ", shp_koords_list)
-    print("Epoch to read out: ", epochs_path_list)
+   # print("shp koords: ", shp_koords_list)
+    #print("Epoch to read out: ", epochs_path_list)
 
     shp_x = shp_koords_list[0]
     shp_y = shp_koords_list[1]
@@ -95,7 +96,7 @@ def read_out_modis_values(epochs_path_list, shp_koords_list, root_dir=False):
 
         if shp_x >= ras_x_ul or shp_x <= ras_x_lr:
             if shp_y <= ras_y_ul and shp_y >= ras_y_lr:
-                print("Shp Coords in SatExtend")
+                #print("Shp Coords in SatExtend")
 
                 # calculate the pixel position in  the image matrix that was marked with the shape geometry
                 ras_x_ind_BildMatrix = int(abs((abs(ras_xorigin) - abs(shp_x)) / ras_res))
@@ -159,11 +160,12 @@ def plot_ts_with_shape(input_dict):
 
     x_axe_data = numpy.array(range(0,46,1))
 
-
-
     print("Start plotting ...")
+
     for shape_id in input_dict.keys():
+
         plotted_year = input_dict[shape_id]["year"]
+
         print("Create Plot for %d and  shape nr %d: "%(plotted_year, shape_id))
         print("ID Desc : ", input_dict[shape_id].keys())
 
@@ -173,20 +175,22 @@ def plot_ts_with_shape(input_dict):
         fig, ax = plt.subplots()
         ax.set_title("FFT Comparison - %s" % location_desc)
         # iterate through the fit products and create for each shape id a plot and show it
+
         for fit_product in input_dict[shape_id]["fit_products"].keys():
 
             print("processing fit product: ", fit_product)
-            print(input_dict[shape_id]["fit_products"][fit_product].keys())
-            print("data: ", input_dict[shape_id]["fit_products"][fit_product]["fit_data"])
 
-            data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data"]
+            data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data_%d"%shape_id]
 
             ax.plot(x_axe_data,data_array, label=fit_product)
+        ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=3, label="raw data")
 
         ax.set_xlabel("Day Of Year in %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
+        ax.set_ylim([0,5000])
         plt.legend()
         plt.show()
+        del fig, ax
 
 
 
@@ -273,7 +277,8 @@ def main():
     # store the specific year data onto the fit_info_XXX Dict. It holds on the key files_list a list with tif epochs for the fit product of the
     # defined year . eg. 2005 --> 2005001 - 2005361
 
-    used_fit_info_dict = fit_info_fft
+    used_fit_info_dict = fit_info_all
+    #used_fit_info_dict = fit_info_fft
     #used_fit_info_dict = fit_info_poly
 
     # write the epochs file names onto the dict
@@ -293,27 +298,49 @@ def main():
         print("Endiing point fit raster epoch : ", used_fit_info_dict[fit_product]["files_list"][-1])
 
 
+
+    cou = 0
     # read out the satellite data on the specific shape koordinates and attach it to the dict
     for shp_index in shp_info.keys():
+        print("\n### Processing SHP ID: ", shp_index)
         shp_info[shp_index].update({"fit_products":used_fit_info_dict})
         koords_to_process = shp_info[shp_index]["koords"]
 
-        for fit_product in shp_info[shp_index]["fit_products"].keys():
-
-            #print(fit_product, " len of epochs: ", len(shp_info[shp_index]["fit_products"][fit_product]["files_list"]))
-
-            shp_info[shp_index]["fit_products"][fit_product].update({"fit_data": read_out_modis_values(shp_info[shp_index]["fit_products"][fit_product]["files_list"],
-                                                   koords_to_process,
-                                                   root_dir=shp_info[shp_index]["fit_products"][fit_product]["root_dir"])})
-
-            #print(shp_info[shp_index]["fit_products"][fit_product]["fit_data"])
-
         shp_info[shp_index].update({"year": user_year})
 
+        shp_info[shp_index].update({"raw_data_%d"%shp_index: read_out_modis_values(raw_data_list_band1[ts_raw_base_index:ts_raw_end_index],
+                                                   koords_to_process,
+                                                   root_dir=os.path.join(in_dir_tf, tile))})
+
+        for fit_product in shp_info[shp_index]["fit_products"].keys():
+
+
+            print("koords: ", koords_to_process)
+            print("")
+            print(shp_info[shp_index]["fit_products"][fit_product].keys())
+
+            data_extracted = read_out_modis_values(shp_info[shp_index]["fit_products"][fit_product]["files_list"],
+                                                   koords_to_process,
+                                                   root_dir=shp_info[shp_index]["fit_products"][fit_product]["root_dir"])
+            print(data_extracted)
+
+            shp_info[shp_index]["fit_products"][fit_product].update({"fit_data_%d"%shp_index: data_extracted})
+
+            print(shp_info[shp_index]["fit_products"][fit_product].keys())
+
+            print(shp_info[shp_index]["fit_products"][fit_product]["fit_data_%d"%shp_index])
+
+
+    print("\n\n")
     # todo: raw data an das shp_info anhängen
 
-    # create a plot for the raster data TS
+    for ind in shp_info.keys():
+        print()
+        for indi in shp_info[ind]["fit_products"].keys():
 
+            print("data: ", shp_info[ind]["fit_products"][indi]["fit_data_%d"%ind])
+
+    # create a plot for the raster data TS
     plot_ts_with_shape(shp_info)
 
 
