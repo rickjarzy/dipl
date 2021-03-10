@@ -187,7 +187,7 @@ def plot_ts_with_shape(input_dict):
 
         ax.set_xlabel("Day Of Year in %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
-        ax.set_ylim([0,5000])
+        ax.set_ylim([0,6500])
         plt.legend()
         plt.show()
         del fig, ax
@@ -247,6 +247,8 @@ def main():
     print("doy_113:\t", len(doy_113))
     print("doy_msing:\t", len(nr_msing_doy_indizes))
 
+    user_band = "band_2"
+
     user_year = 2002
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
@@ -264,7 +266,7 @@ def main():
     print()
     # get into raw dir and select year001
     os.chdir(os.path.join(in_dir_tf, tile))
-    raw_data_list_band1 = sorted(glob.glob("*.band_1.tif"))
+    raw_data_list_band1 = sorted(glob.glob("*.%s.tif"%user_band))
 
     # get into  fit dir and select year001
     os.chdir(os.path.join(out_dir_fit, tile))
@@ -291,7 +293,7 @@ def main():
             ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
 
-        used_fit_info_dict[fit_product]["files_list"] = sorted(glob.glob("*.band_1.%s.tif" % fit_product))[
+        used_fit_info_dict[fit_product]["files_list"] = sorted(glob.glob("*.%s.%s.tif" % (user_band, fit_product)))[
                                                         ts_fit_base_index:ts_fit_end_index]
 
         print("Starting point fit raster epoch: ", used_fit_info_dict[fit_product]["files_list"][0])
