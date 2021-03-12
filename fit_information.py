@@ -26,9 +26,13 @@ fit_info_all["fft"] = {"algo_desc":"calculates a single FFT over an entire year 
 # i have only 3 fitted epochs - i think this is because they have exact the same results as poly_lin_win15.
 # fit_info_all["lin_poly_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
 #                                                                              "updateing the weights", "weights":"yes", "files_list":[]}
+
+# fitted products start with 2000113 for band_1 and band_2
 fit_info_all["lin_poly_win15.weights.1_0.5_0.01_0.01_q0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
                                                                              "updateing the weights", "weights":"yes", "files_list":[]}
+# fitted products start with 2000113 for band_1 and band_2
 fit_info_all["poly_15.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
+# fitted products start with 2000113 for band_1 and band_2
 fit_info_all["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"
                                                                 "on the pixels that had NaN values or less then a specific inversion number", "files_list":[]}
 

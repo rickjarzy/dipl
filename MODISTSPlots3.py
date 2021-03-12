@@ -176,6 +176,15 @@ def plot_ts_with_shape(input_dict):
         ax.set_title("FFT Comparison - %s" % location_desc)
         # iterate through the fit products and create for each shape id a plot and show it
 
+        best_qual = numpy.array(input_dict[shape_id]["quality_%d"%shape_id])
+        qual_factor = 100
+        # turn the coding around so 0 is best quality but it should be higher in the plot so 0 turns 3
+        good_qual = numpy.where(best_qual == 0, 3, numpy.nan) * qual_factor
+        okay_qual = numpy.where(best_qual == 1, 2, numpy.nan) * qual_factor
+        bad_qual = numpy.where(best_qual == 2, 1, numpy.nan) * qual_factor
+        really_bad_qual = numpy.where(best_qual == 3, 0, numpy.nan) * qual_factor
+        nan_values = numpy.where(best_qual == 255, 3, numpy.nan)
+
         for fit_product in input_dict[shape_id]["fit_products"].keys():
 
             print("processing fit product: ", fit_product)
@@ -183,9 +192,15 @@ def plot_ts_with_shape(input_dict):
             data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data_%d"%shape_id]
 
             ax.plot(x_axe_data,data_array, label=fit_product)
-        ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=3, label="raw data")
 
-        ax.set_xlabel("Day Of Year in %s" % plotted_year)
+        ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
+        ax.plot(x_axe_data, good_qual, 'go', label="Good Quality")
+        ax.plot(x_axe_data, okay_qual, 'yo', label="Okay Quality")
+        ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Bad Quality")
+        ax.plot(x_axe_data, really_bad_qual, 'ro', label="Really Bad Quality")
+        ax.plot(x_axe_data, nan_values, 'ko', label="NaN Values")
+
+        ax.set_xlabel("Epoch Nr of Year %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
         ax.set_ylim([0,6500])
         plt.legend()
@@ -250,6 +265,7 @@ def main():
     user_band = "band_2"
 
     user_year = 2002
+
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
 
@@ -259,6 +275,7 @@ def main():
     #
     ts_fit_base_index = len(doy_113) + len(doy_full) * doy_factors[user_year]["factor"]
     ts_fit_end_index = ts_fit_base_index + len(doy_full)
+
     print("ts_raw_base_index: ", ts_raw_base_index)
     print("ts_raw_end_index : ", ts_raw_end_index)
     print("ts_fit_base_index: ", ts_fit_base_index)
@@ -266,15 +283,19 @@ def main():
     print()
     # get into raw dir and select year001
     os.chdir(os.path.join(in_dir_tf, tile))
-    raw_data_list_band1 = sorted(glob.glob("*.%s.tif"%user_band))
+    raw_data_list = sorted(glob.glob("*.%s.tif"%user_band))
+
+    # get into qual dir and select year001
+    os.chdir(os.path.join(in_dir_qs, tile))
+    qual_data_list = sorted(glob.glob("*.%s.tif"%user_band))
 
     # get into  fit dir and select year001
     os.chdir(os.path.join(out_dir_fit, tile))
 
-    print("Startung point raw raster epoch: ", raw_data_list_band1[ts_raw_base_index])
-    print("Ending point raw raster epoch:   ", raw_data_list_band1[ts_raw_end_index])
+    print("Startung point raw raster epoch: ", raw_data_list[ts_raw_base_index])
+    print("Ending point raw raster epoch:   ", raw_data_list[ts_raw_end_index])
 
-    print(raw_data_list_band1[ts_raw_base_index:ts_raw_end_index])
+    print(raw_data_list[ts_raw_base_index:ts_raw_end_index])
 
     # store the specific year data onto the fit_info_XXX Dict. It holds on the key files_list a list with tif epochs for the fit product of the
     # defined year . eg. 2005 --> 2005001 - 2005361
@@ -310,12 +331,15 @@ def main():
 
         shp_info[shp_index].update({"year": user_year})
 
-        shp_info[shp_index].update({"raw_data_%d"%shp_index: read_out_modis_values(raw_data_list_band1[ts_raw_base_index:ts_raw_end_index],
+        shp_info[shp_index].update({"raw_data_%d"%shp_index: read_out_modis_values(raw_data_list[ts_raw_base_index:ts_raw_end_index],
                                                    koords_to_process,
                                                    root_dir=os.path.join(in_dir_tf, tile))})
 
-        for fit_product in shp_info[shp_index]["fit_products"].keys():
+        shp_info[shp_index].update({"quality_%d"%shp_index: read_out_modis_values(qual_data_list[ts_raw_base_index:ts_raw_end_index],
+                                                   koords_to_process,
+                                                   root_dir=os.path.join(in_dir_qs, tile))})
 
+        for fit_product in shp_info[shp_index]["fit_products"].keys():
 
             print("koords: ", koords_to_process)
             print("")
