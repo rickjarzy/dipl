@@ -264,7 +264,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2002
+    user_year = 2003
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
@@ -313,10 +313,16 @@ def main():
         if fit_product == "fft":
             ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
+        else:
+            ts_fit_base_index = len(doy_113) + len(doy_full) * doy_factors[user_year]["factor"]
+            ts_fit_end_index = ts_fit_base_index + len(doy_full)
+
+        full_ts = sorted(glob.glob("*.%s.%s.tif" % (user_band, fit_product)))
 
         used_fit_info_dict[fit_product]["files_list"] = sorted(glob.glob("*.%s.%s.tif" % (user_band, fit_product)))[
                                                         ts_fit_base_index:ts_fit_end_index]
-
+        print("search for: ", "*.%s.%s.tif" % (user_band, fit_product))
+        print("Starting point fill TS: ", full_ts[0])
         print("Starting point fit raster epoch: ", used_fit_info_dict[fit_product]["files_list"][0])
         print("Endiing point fit raster epoch : ", used_fit_info_dict[fit_product]["files_list"][-1])
 
