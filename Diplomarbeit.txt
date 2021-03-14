@@ -41,7 +41,7 @@ Fenster von nur vier Beobachtungen pro Tag. [3]. Die Qualit�tsinformation f�
     2 = Magnitude inversion (numobs >=7)
    	3 = Magnitude inversion (numobs >=2&<7)                     
     4 = Fill value
-
+Der Fill value ist mit 255, dem NoData Value gleichzusetzen.
 
 MCD43A4 NBAR Data
 =================

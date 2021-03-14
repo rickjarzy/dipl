@@ -108,6 +108,7 @@ def additional_stat_info_raster_mp(qual_block, weights):
     qual_block[qual_block == 2] = weights[2]
     qual_block[qual_block == 3] = weights[3]
 
+
     qual_block[qual_block == 255] = numpy.nan  # set to 0 so in the ausgleich the nan -> zero convertion is not needed
 
 

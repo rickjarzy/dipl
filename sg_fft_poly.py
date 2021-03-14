@@ -113,7 +113,9 @@ if __name__ == "__main__":
                         data_block, qual_block, shm, shm_qual, fitted_raster_band_name = init_data_block_sg_fft(sg_window, b, in_dir_qs, in_dir_tf,
                                                                                     tile, list_qual, list_data,
                                                                                     num_of_buf_bytes,fit_nr, name_weights_addition, master_raster_info, poly=True)
-
+                        data_block_raw = data_block
+                        # fft is not affected by 32767 but it made it nearly impossible to make the poly fit after wards so set it to nan before the fft
+                        data_block[data_block == 32767] = numpy.nan
                         qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
                         print("\nStart fitting FFT SG block - Nr %d out of %d \n-------------------------------------------" % (ts, len_list_data))
@@ -143,8 +145,6 @@ if __name__ == "__main__":
                         # Poly Fit 1
                         # ==========
                         print("Start Poly Fit #1 ...")
-                        # set 32767 values to numpy.nan
-                        data_block[data_block == 32767] = numpy.nan
 
                         [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
                         print("Datablock type: ", fit.dtype)
@@ -182,9 +182,11 @@ if __name__ == "__main__":
                     else:
                         try:
 
-                            data_block, qual_block, fitted_raster_band_name = update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs,
-                                                                           tile, list_qual, list_data, sg_window, ts, fit_nr, name_weights_addition, weights)
+                            data_block_raw, data_block, qual_block, fitted_raster_band_name = update_data_block_sg_fft(data_block_raw, data_block, qual_block, in_dir_tf, in_dir_qs,
+                                                                           tile, list_qual, list_data, sg_window, ts, fit_nr, name_weights_addition, weights, True)
 
+                            # fft is not affected by 32767 but it made it nearly impossible to make the poly fit after wards so set it to nan before the fft
+                            data_block[data_block == 32767] = numpy.nan
                             print("\nStart fitting FFT year block - Nr %d out of %d \n-------------------------------------------" % ( ts, len_list_data/sg_window))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
 
@@ -211,8 +213,6 @@ if __name__ == "__main__":
                             # Poly Fit 1
                             # ==========
 
-                            # set 32767 values to numpy.nan
-                            data_block[data_block == 32767] = numpy.nan
                             print("Start Poly Fit #1 ...")
                             [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
                             data_block[:] = fit

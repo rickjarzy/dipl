@@ -194,16 +194,18 @@ def init_data_block_sg_fft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qua
     return data_block, qual_block, shm, shm_qual, fitted_raster_band_name
 
 
-def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data, sg_window, ts_epoch, fit_nr, name_weights_addition, weights, poly=False):
+def update_data_block_sg_fft(data_block_raw, data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data, sg_window, ts_epoch, fit_nr, name_weights_addition, weights, poly=False):
 
     try:
 
     # update datablock
     # -----------------
-        data_block[0:-1, :, :] = data_block[1:, :, :]
+        data_block[0:-1, :, :] = data_block_raw[1:, :, :]
         print("# UPDATE Ras Data File: ", list_data[sg_window - 1 + ts_epoch])
 
         data_block[sg_window - 1, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window - 1 + ts_epoch])).ReadAsArray()
+
+        data_block_raw[-1,:,:] = data_block[-1,:,:]
 
     except Exception as ErrorQualRasReading:
         print("### ERROR while updateing satellite raster block:\n {}".format(ErrorQualRasReading))
@@ -236,7 +238,7 @@ def update_data_block_sg_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile,
     except Exception as ErrorQualRasReading:
         print("### ERROR while updateing quality raster block:\n {}".format(ErrorQualRasReading))
 
-    return data_block, qual_block, fitted_raster_band_name
+    return data_block_raw, data_block, qual_block, fitted_raster_band_name
 
 
 def perform_fft(input_info, plot=False):

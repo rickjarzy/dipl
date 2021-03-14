@@ -182,8 +182,9 @@ def plot_ts_with_shape(input_dict):
         good_qual = numpy.where(best_qual == 0, 3, numpy.nan) * qual_factor
         okay_qual = numpy.where(best_qual == 1, 2, numpy.nan) * qual_factor
         bad_qual = numpy.where(best_qual == 2, 1, numpy.nan) * qual_factor
-        really_bad_qual = numpy.where(best_qual == 3, 0, numpy.nan) * qual_factor
-        nan_values = numpy.where(best_qual == 255, 3, numpy.nan)
+        really_bad_qual = numpy.where(best_qual == 3, 0.5, numpy.nan) * qual_factor
+        fill_value = numpy.where(best_qual == 4, 0.1, numpy.nan) * qual_factor
+        nan_values = numpy.where(best_qual == 255,  0, numpy.nan)
 
         for fit_product in input_dict[shape_id]["fit_products"].keys():
 
@@ -194,10 +195,11 @@ def plot_ts_with_shape(input_dict):
             ax.plot(x_axe_data,data_array, label=fit_product)
 
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
-        ax.plot(x_axe_data, good_qual, 'go', label="Good Quality")
-        ax.plot(x_axe_data, okay_qual, 'yo', label="Okay Quality")
-        ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Bad Quality")
-        ax.plot(x_axe_data, really_bad_qual, 'ro', label="Really Bad Quality")
+        ax.plot(x_axe_data, good_qual, 'go', label="Best Quality Full Inversion")
+        ax.plot(x_axe_data, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
+        ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Magnitude Inversion ( number of obs >= 7)")
+        ax.plot(x_axe_data, really_bad_qual, 'ro', label="Magnitude Inversion (number of obs 2>= X < 7)")
+        ax.plot(x_axe_data, fill_value, 'bo', label="Fill Value")
         ax.plot(x_axe_data, nan_values, 'ko', label="NaN Values")
 
         ax.set_xlabel("Epoch Nr of Year %s" % plotted_year)
@@ -264,7 +266,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2003
+    user_year = 2002
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands

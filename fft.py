@@ -189,7 +189,7 @@ if __name__ == "__main__":
                             write_fitted_raster_to_disk_fft(data_block, year_list_data, out_dir_fit, tile, master_raster_info, name_weights_addition)
 
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
-                            break
+
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
                             shm.close()
