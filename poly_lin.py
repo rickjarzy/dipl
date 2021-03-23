@@ -77,7 +77,7 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.01, 0.01]
+        weights = [1, 0.5, 0.25, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         calc_from_to = [0, 355]
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                             shm.unlink()
                             break
 
-                        break
+
                     elif ts_epoch == calc_from_to[1]:
                         break
 

@@ -6,11 +6,15 @@ import time
 import socket
 import numpy
 from utils_numpy import write_fitted_raster_to_disk
-from utils_mp import additional_stat_info_raster_mp, fitq_mp
-from utils_fft import init_data_block_sg_fft, get_master_raster_info, multi_fft, update_data_block_sg_fft
+from utils_fft import init_data_block_dft, get_master_raster_info, multi_dft, update_data_block_dft, write_fitted_raster_to_disk_fft
 import fit_config
 
+"""
 
+ATTENTION - THIS SOFTWARE FITS FOR AN ENTIRE YEAR!!!!!!
+
+
+"""
 if __name__ == "__main__":
     try:
         start = time.time()
@@ -40,9 +44,9 @@ if __name__ == "__main__":
 
         if os.name == "posix" and socket.gethostname() == "paul-buero":
 
-            in_dir_qs = r"/media/paul/Daten_Diplomarbeit2/MODIS_Data/v6/tiff_single/MCD43A2"
-            in_dir_tf = r"/media/paul/Daten_Diplomarbeit2/MODIS_Data/v6/tiff_single/MCD43A4"
-            out_dir_fit = r"/media/paul/Daten_Diplomarbeit2/MODIS_Data/v6/fitted"
+            in_dir_qs = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A2"
+            in_dir_tf = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A4"
+            out_dir_fit = r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/fitted"
 
         elif os.name == "posix" and socket.gethostname() in ["iotmaster", "iotslave1", "iotslave2"]:
             in_dir_qs = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A2"
@@ -59,24 +63,40 @@ if __name__ == "__main__":
         bands = fit_config.bands              #list(range(1,8,1))
         print(bands)
 
-        sg_window = 15                                       # fit 15 epochs
+        sg_window = 46                                       # fit an entire year
+        year = sg_window
         window_arr = numpy.arange(0,sg_window,1)             # range from 0 to sg_window
         fit_nr = int(numpy.median(window_arr))               # just a tensor fomr 0 to sg_window
         center = int(numpy.median(window_arr))               # center index of the data stack
         sigm = numpy.ones((sg_window, 2400,2400))
-
-        name_weights_addition = ".sg_%s_fft_poly.tif"
-
-        calc_from_to = [0, 355]                #39 = 2000057 -  =
-
         half_window = int(numpy.floor(sg_window/2))
 
-        A = numpy.ones([sg_window, 3])
-        A[:, 1] = numpy.arange(1, sg_window + 1, 1)
-        A[:, 2] = numpy.arange(1, sg_window + 1, 1)
-        A[:, 2] = A[:, 2] ** 2
+        dft_elements = 3
 
-        weights = [1, 0.5, 0.01, 0.01]
+        block = 2400
+
+        # Create A Matrix with partial differentiated Fourier Elements
+        A = numpy.ones([year, dft_elements * 2 + 1], dtype=float)
+        row = numpy.empty([dft_elements, 2], dtype=float)
+        ld = numpy.empty((block * block, year, 1), dtype=float)
+
+        for t in range(1, year + 1, 1):
+            for n in range(1, dft_elements + 1, 1):
+                da = numpy.cos((2 * numpy.pi / year) * (n) * t)
+                db = numpy.sin((2 * numpy.pi / year) * (n) * t)
+                row[n - 1, 0] = da
+                row[n - 1, 1] = db
+
+            A[t - 1, 1:] = row.reshape(1, dft_elements * 2)
+
+
+
+        weights = [1, 0.5, 0.25, 0.01]
+
+        name_weights_addition = ".dft.elements_%d.tif"%dft_elements
+
+        calc_from_to = [39, -14]                #39 = 2000361 - -14 =
+
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
         # multiprocessing constants
@@ -102,31 +122,39 @@ if __name__ == "__main__":
 
             else:
 
-                for ts in range(0, len_list_data, 1):
+                for ts in range(0, len_list_data, sg_window):
                     epoch_start = time.time()
+                    ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
+
+                    #list with file names to process
+                    year_list_data = list_data[ts:ts + sg_window]
+                    year_list_qual = list_qual[ts:ts + sg_window]
 
                     if ts == 0:
                         #try:
                         # Initialize data fitting -load satellite data into data blocks
                         # ============================================================
 
-                        data_block, qual_block, shm, shm_qual, fitted_raster_band_name = init_data_block_sg_fft(sg_window, b, in_dir_qs, in_dir_tf,
-                                                                                    tile, list_qual, list_data,
-                                                                                    num_of_buf_bytes,fit_nr, name_weights_addition, master_raster_info, poly=True)
-                        data_block_raw = data_block
-                        # fft is not affected by 32767 but it made it nearly impossible to make the poly fit after wards so set it to nan before the fft
-                        data_block[data_block == 32767] = numpy.nan
-                        qual_block = additional_stat_info_raster_mp(qual_block, weights)
+                        data_block, qual_block, shm, shm_qual = init_data_block_dft(sg_window, b, in_dir_qs, in_dir_tf,
+                                                                                    tile, year_list_qual, year_list_data,
+                                                                                    num_of_buf_bytes, master_raster_info)
 
-                        print("\nStart fitting FFT SG block - Nr %d out of %d \n-------------------------------------------" % (ts, len_list_data))
+                        print("\nStart fitting DFT year block - Nr %d out of %d \n-------------------------------------------" % (ts, len_list_data/sg_window))
                         print("Shape Datablock: ", data_block.shape)
-                        print("Datablock type: ", data_block.dtype)
+                        # FFT Logic Here
 
-                        # FFT Fit
-                        # =======
                         job_list_with_data_inidzes = []  # for mp pool
                         cou = 0
                         start_interp_time = time.time()
+
+                        data_block[data_block == 32767] = numpy.nan
+
+                        qual_block[qual_block == 0] = weights[0]
+                        qual_block[qual_block == 1] = weights[1]
+                        qual_block[qual_block == 2] = weights[2]
+                        qual_block[qual_block == 3] = weights[3]
+                        qual_block[qual_block == 255] = 0
+
 
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
@@ -134,67 +162,42 @@ if __name__ == "__main__":
                             info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm,
                                          "process_nr": cou, "shm_qual": shm_qual, "weights": weights,
                                          "dim": (sg_window, master_raster_info[2], master_raster_info[3]),
-                                         "num_of_bytes": num_of_buf_bytes, "poly":True}
+                                         "num_of_bytes": num_of_buf_bytes, "A":A}
                             job_list_with_data_inidzes.append(info_dict)
                             cou += 1
 
-                        multi_fft(job_list_with_data_inidzes)
-                        print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
-                        time.sleep(2)
-                        print("Datablock type: ", data_block.dtype)
-                        # Poly Fit 1
-                        # ==========
-                        print("Start Poly Fit #1 ...")
-
-                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
-                        print("Datablock type: ", fit.dtype)
-                        #data_block[:] = fit
-                        #del fit
-
-                        # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
-                        #               qual_block[:, plot_indizess[0], plot_indizess[1]],
-                        #               weights,
-                        #               fit[:, plot_indizess[0], plot_indizess[1]])
-
-                        # varianz update
-
-                        sigm = sigm * sig
-                        qual_block_nu = sigm / delta_lv
-
-                        # Poly Fit 2
-                        # ==========
-                        print("Start Poly Fit #2 ...")
-                        [fit, sig, delta_lv] = fitq_mp(data_block, qual_block_nu, A, sg_window)
-                        #data_block[:] = fit
-                        #del fit
-
-                        sigm = sigm ** 0  # set back to ones
-                        del delta_lv
-
-                        write_fitted_raster_to_disk(fit[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                        multi_dft(job_list_with_data_inidzes)
+                        print("finished DFT in ", time.time() - start_interp_time, " [sec] ")
+                        break
+                        write_fitted_raster_to_disk_fft(data_block, year_list_data, out_dir_fit, tile, master_raster_info, name_weights_addition)
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
                         #     shm.unlink()
                         #     shm_qual.unlink()
                         #     break
-                        print("finished FFT - Poly - Poly in ", time.time() - start_interp_time, " [sec] ")
-                        del fit
+
                     else:
                         try:
 
-                            data_block_raw, data_block, qual_block, fitted_raster_band_name = update_data_block_sg_fft(data_block_raw, data_block, qual_block, in_dir_tf, in_dir_qs,
-                                                                           tile, list_qual, list_data, sg_window, ts, fit_nr, name_weights_addition, weights, True)
+                            data_block, qual_block = update_data_block_dft(data_block, qual_block, in_dir_tf, in_dir_qs,
+                                                                           tile, year_list_qual, year_list_data, weights)
 
-                            # fft is not affected by 32767 but it made it nearly impossible to make the poly fit after wards so set it to nan before the fft
-                            data_block[data_block == 32767] = numpy.nan
-                            print("\nStart fitting FFT year block - Nr %d out of %d \n-------------------------------------------" % ( ts, len_list_data/sg_window))
+                            print("\nStart fitting DFT year block - Nr %d out of %d \n-------------------------------------------" % ( ts, len_list_data/sg_window))
                             print("DATABLOCK: \n", data_block[:, 0, 0])
 
-                            ## FFT Logic Here
+                            ## DFT Logic Here
 
                             job_list_with_data_inidzes = []  # for mp pool
                             cou = 0
                             start_interp_time = time.time()
+
+                            data_block[data_block == 32767] = numpy.nan
+
+                            qual_block[qual_block == 0] = weights[0]
+                            qual_block[qual_block == 1] = weights[1]
+                            qual_block[qual_block == 2] = weights[2]
+                            qual_block[qual_block == 3] = weights[3]
+                            qual_block[qual_block == 255] = 0
 
                             # create sections that should run in parallel
                             for part in range(0, master_raster_info[2], number_of_rows_data_part):
@@ -202,46 +205,17 @@ if __name__ == "__main__":
                                 info_dict = {"from": part, "to": part + number_of_rows_data_part, "shm": shm,
                                              "process_nr": cou, "shm_qual": shm_qual, "weights": weights,
                                              "dim": (sg_window, master_raster_info[2], master_raster_info[3]),
-                                             "num_of_bytes": num_of_buf_bytes, "poly":True}
+                                             "num_of_bytes": num_of_buf_bytes, "A":A}
                                 job_list_with_data_inidzes.append(info_dict)
                                 cou += 1
 
-                            multi_fft(job_list_with_data_inidzes)
-                            time.sleep(2)
-                            print("finished FFT in ", time.time() - start_interp_time, " [sec] ")
-
-                            # Poly Fit 1
-                            # ==========
-
-                            print("Start Poly Fit #1 ...")
-                            [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
-                            #data_block[:] = fit
-                            #del fit
-
-                            # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
-                            #               qual_block[:, plot_indizess[0], plot_indizess[1]],
-                            #               weights,
-                            #               fit[:, plot_indizess[0], plot_indizess[1]])
-
-                            # varianz update
-
-                            sigm = sigm * sig
-                            qual_block_nu = sigm / delta_lv
-
-                            # Poly Fit 2
-                            # ==========
-                            print("Start Poly Fit #2 ...")
-                            [fit, sig, delta_lv] = fitq_mp(fit, qual_block_nu, A, sg_window)
-                            #data_block[:] = fit
-                            #del fit
-
-                            sigm = sigm ** 0  # set back to ones
-                            del delta_lv
+                            multi_dft(job_list_with_data_inidzes)
+                            print("finished DFT in ", time.time() - start_interp_time, " [sec] ")
 
                             # write output raster
-                            write_fitted_raster_to_disk(fit[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
-                            del fit
-                            print("finished FFT - Poly - Poly in ", time.time() - start_interp_time, " [sec] ")
+                            write_fitted_raster_to_disk_fft(data_block, year_list_data, out_dir_fit, tile, master_raster_info, name_weights_addition)
+
+                            print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
 
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))

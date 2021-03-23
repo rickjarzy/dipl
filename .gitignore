@@ -11,3 +11,4 @@ QGis
 fit_config.py
 *.patch
 test_fft.py
+python/**

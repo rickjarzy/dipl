@@ -114,7 +114,7 @@ def update_data_block_fft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, li
             qual_data_new = numpy.where(qual_data_new == 2, weights[2], qual_data_new)
             qual_data_new = numpy.where(qual_data_new == 3, weights[3], qual_data_new)
 
-            #qual_data_new[qual_data_new == 255] = numpy.nan
+            qual_data_new[qual_data_new == 255] = numpy.nan
 
             qual_block[i, :, :] = qual_data_new
             del qual_data_new
@@ -203,9 +203,10 @@ def update_data_block_sg_fft(data_block_raw, data_block, qual_block, in_dir_tf, 
         data_block[0:-1, :, :] = data_block_raw[1:, :, :]
         print("# UPDATE Ras Data File: ", list_data[sg_window - 1 + ts_epoch])
 
+        # update the last
         data_block[sg_window - 1, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[sg_window - 1 + ts_epoch])).ReadAsArray()
 
-        data_block_raw[-1,:,:] = data_block[-1,:,:]
+        data_block_raw[:,:,:] = data_block[:,:,:]
 
     except Exception as ErrorQualRasReading:
         print("### ERROR while updateing satellite raster block:\n {}".format(ErrorQualRasReading))
@@ -443,3 +444,174 @@ def write_fitted_raster_to_disk_fft(data_block, list_data_names, out_dir_fit, ti
         out_ras.SetProjection(master_raster_info[1])
         out_ras.FlushCache()
         del out_ras, out_band, out_ras_name
+
+
+def init_data_block_dft(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info):
+
+    """
+    Creates a initial datablock for the modis data and returns a numpy ndim array
+    Parameters
+    ----------
+    sg_window
+    band
+    in_dir_qs
+    in_dir_tf
+    tile
+    list_qual
+    list_data
+    device
+    master_raster_info
+    fit_nr
+    name_weights_addition
+
+    Returns
+    -------
+
+    """
+
+    #data_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
+
+    shm = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
+    data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.float64, buffer=shm.buf)
+
+    shm_qual = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
+    qual_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.float64, buffer=shm_qual.buf)
+
+    print("\n# START READING SATDATA for BAND {}".format(band))
+    for i in range(0, len(list_data), 1):
+
+        # load qual file
+        try:
+            qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
+
+            #print("load qual data for band %d: %s" % (band, list_qual[i]))
+            #qual_band = qual_ras.GetRasterBand(1)
+            qual_block[i, :, :] = qual_ras.ReadAsArray()
+
+            del qual_ras
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
+        # load satellite data
+        try:
+            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+
+            print("# load sat data for band %s: %s" % (str(band), list_data[i]))
+            #data_band = data_ras.GetRasterBand(1)
+            data_block[i, :, :] = data_ras.ReadAsArray()
+
+            del data_ras
+
+        except Exception as ErrorRasterDataReading:
+            print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
+
+    print("data_block from readout: ", data_block[:,2000,100])
+    return data_block, qual_block, shm, shm_qual
+
+def update_data_block_dft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_qual, list_data, weights):
+
+    # iter through data and qual list
+    for i in range(0, len(list_data), 1):
+        try:
+
+            # update datablock
+            # -----------------
+            print("# UPDATE Ras Data File: ", list_data[i])
+            data_block[i, :, :] = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i])).ReadAsArray()
+
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while updateing satellite raster block:\n {}".format(ErrorQualRasReading))
+
+        try:
+
+            # update qualblock
+            # ----------------
+            print("# UPDATE Qual Data File: ", list_qual[i])
+            qual_data_new = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i])).ReadAsArray()
+
+            # update weights
+            qual_block[i, :, :] = qual_data_new
+            del qual_data_new
+
+        except Exception as ErrorQualRasReading:
+            print("### ERROR while updateing quality raster block:\n {}".format(ErrorQualRasReading))
+
+    return data_block, qual_block
+
+
+
+
+def multi_dft(job_list):
+
+    with multiprocessing.Pool() as pool:
+        pool.map(perform_dft, job_list)
+
+
+def perform_dft(input_info, plot=False):
+
+
+    print("\nspawn DFT process nr : ", input_info["process_nr"])
+
+    existing_shm = shared_memory.SharedMemory(name=input_info["shm"].name)
+    existing_shm_qual = shared_memory.SharedMemory(name=input_info["shm_qual"].name)
+    # check if poly calculation is on to be executed, because then there must be an additional key in the dictionary
+    poly = False
+    reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.float64, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
+    reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
+    # get data to process out of buffer
+
+    A = input_info["A"]
+    print("ref data dtype: ", reference_to_data_block.dtype)
+    print("Shape A: ", A.shape)
+    print("\n")
+
+    # reshape data from buffer to 2d matrix with the time as y coords and x as the values
+    data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0],
+                                               reference_to_data_block.shape[1] * reference_to_data_block.shape[2])
+
+    qual_mat = reference_to_data_block.reshape(reference_to_qual_block.shape[0],
+                                               reference_to_qual_block.shape[1] * reference_to_qual_block.shape[2])
+
+    for i in range(0, data_mat.shape[1],1):
+        # check if nan fields are in a vector - if yes interpolate linear on that spots
+        # at the qual vector the indizes of where data is nan should allready be set to zero ( see in main file )
+        data_mat_v_nan = numpy.isfinite(data_mat[:, i])
+        data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
+
+        if False in data_mat_v_nan:
+            # interpolate on that spots
+            data_mat_v = numpy.round(numpy.interp(data_mat_v_t,
+                                                         data_mat_v_t[data_mat_v_nan],
+                                                         data_mat[:, i][data_mat_v_nan]))
+
+
+        else:
+            data_mat_v = data_mat[:, i]
+            qual_mat_v = qual_mat[:, i]
+            # ATPA
+            print("data shape: ", data_mat_v.shape)
+            print("qual shape: ", qual_mat_v.shape)
+            ATPA = numpy.dot(numpy.dot(A.T, qual_mat_v), A)
+
+            # ATPL
+            ATPL = numpy.dot(numpy.dot(A.T,qual_mat_v), data_mat_v)
+
+            x_hat = numpy.dot(ATPA, ATPL)
+
+            l_hat = numpy.dot(A, x_hat)
+
+            print("DFT x_HAT: ")
+
+        break
+
+
+    # strore orig time, cols and row information - needed for reshaping
+    orig_time = reference_to_data_block.shape[0]
+    orig_rows = reference_to_data_block.shape[1]
+    orig_cols = reference_to_data_block.shape[2]
+
+
+
+
+
+    # save interpolation results on the shared memory object
+    reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols))
