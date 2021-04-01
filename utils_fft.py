@@ -576,7 +576,7 @@ def perform_dft(input_info, plot=False):
         # at the qual vector the indizes of where data is nan should allready be set to zero ( see in main file )
         data_mat_v_nan = numpy.isfinite(data_mat[:, i])
         data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
-
+        print(i)
         if False in data_mat_v_nan:
             # interpolate on that spots
             data_mat_v = numpy.round(numpy.interp(data_mat_v_t,
@@ -586,20 +586,26 @@ def perform_dft(input_info, plot=False):
 
         else:
             data_mat_v = data_mat[:, i]
-            qual_mat_v = qual_mat[:, i]
-            # ATPA
-            print("data shape: ", data_mat_v.shape)
-            print("qual shape: ", qual_mat_v.shape)
-            ATPA = numpy.dot(numpy.dot(A.T, qual_mat_v), A)
 
-            # ATPL
-            ATPL = numpy.dot(numpy.dot(A.T,qual_mat_v), data_mat_v)
+        qual_mat_v = qual_mat[:, i]
 
-            x_hat = numpy.dot(ATPA, ATPL)
+        P = numpy.ones()
 
-            l_hat = numpy.dot(A, x_hat)
+        # ATPA
+        print("data shape: ", data_mat_v.shape)
+        print("qual shape: ", qual_mat_v.shape)
+        print("A.shape   : ", A.shape)
+        print("A.T shape : ", A.T.shape)
+        ATPA = numpy.dot(numpy.dot(A.T, qual_mat_v), A)
 
-            print("DFT x_HAT: ")
+        # ATPL
+        ATPL = numpy.dot(numpy.dot(A.T,qual_mat_v), data_mat_v)
+
+        x_hat = numpy.dot(ATPA, ATPL)
+
+        l_hat = numpy.dot(A, x_hat)
+
+        print("DFT x_HAT: ")
 
         break
 
@@ -608,9 +614,6 @@ def perform_dft(input_info, plot=False):
     orig_time = reference_to_data_block.shape[0]
     orig_rows = reference_to_data_block.shape[1]
     orig_cols = reference_to_data_block.shape[2]
-
-
-
 
 
     # save interpolation results on the shared memory object
