@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import time
 import socket
 from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data)
 from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
                       get_master_raster_info, fitq_mp)
-import torch
+
 import os
 import numpy
 import glob
@@ -18,16 +18,6 @@ Calculate Poly fit twice then do a lin interpolation on the NaN Cells
 if __name__ == "__main__":
     try:
         start = time.time()
-
-        if torch.cuda.is_available():
-            #device = torch.device("cuda")
-            #print("CUDA is available")
-            device = torch.device("cpu")
-            print("CUDA is available - but still using cpu due not enought GPU Mem")
-        else:
-            device = torch.device("cpu")
-            print("CPU is available")
-
 
         # # 4TB USB Festplatte
         # in_dir_qs = r"F:\modis\v6\tiff_single\MCD43A2"
@@ -77,10 +67,10 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.25, 0.01]
+        weights = [1, 0.5, 0.01, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-        calc_from_to = [0, 355]
+        calc_from_to = [352, 0]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 

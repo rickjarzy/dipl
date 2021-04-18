@@ -1,11 +1,11 @@
 from __future__ import print_function
-import torch
+
 import os
 import glob
 import time
 import socket
 import numpy
-from utils_numpy import write_fitted_raster_to_disk
+
 from utils_fft import init_data_block_fft, get_master_raster_info, multi_fft, update_data_block_fft, write_fitted_raster_to_disk_fft
 import fit_config
 
@@ -18,15 +18,6 @@ ATTENTION - THIS SOFTWARE FITS FOR AN ENTIRE YEAR!!!!!!
 if __name__ == "__main__":
     try:
         start = time.time()
-
-        if torch.cuda.is_available():
-            #device = torch.device("cuda")
-            #print("CUDA is available")
-            device = torch.device("cpu")
-            print("CUDA is available - but still using cpu due not enought GPU Mem")
-        else:
-            device = torch.device("cpu")
-            print("CPU is available")
 
 
         # # 4TB USB Festplatte
