@@ -35,7 +35,7 @@ import copy
 
 from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
-from fit_information import fit_info_all, fit_info_poly, fit_info_fft, doy_factors
+from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
 
 def read_out_modis_values(epochs_path_list, shp_koords_list, root_dir=False):
     """
@@ -299,9 +299,10 @@ def main():
     # store the specific year data onto the fit_info_XXX Dict. It holds on the key files_list a list with tif epochs for the fit product of the
     # defined year . eg. 2005 --> 2005001 - 2005361
 
-    used_fit_info_dict = fit_info_all
+    #used_fit_info_dict = fit_info_all
     #used_fit_info_dict = fit_info_fft
     #used_fit_info_dict = fit_info_poly
+    used_fit_info_dict = fit_info_best
 
     # write the epochs file names onto the dict
     for fit_product in used_fit_info_dict.keys():
