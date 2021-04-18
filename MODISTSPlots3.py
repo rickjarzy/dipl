@@ -156,7 +156,7 @@ def read_out_shp_koord(shp_path):
     return return_dict
 
 
-def plot_ts_with_shape(input_dict):
+def plot_ts_with_shape(input_dict, input_band):
 
     x_axe_data = numpy.array(range(0,46,1))
 
@@ -204,7 +204,13 @@ def plot_ts_with_shape(input_dict):
 
         ax.set_xlabel("Epoch Nr of Year %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
-        ax.set_ylim([0,6500])
+
+        if input_band == "band_1":
+            y_limits = [0, 3500]
+        elif input_band == "band_2":
+            y_limits = [0, 6500]
+
+        ax.set_ylim(y_limits)
         plt.legend()
         plt.show()
         del fig, ax
@@ -274,15 +280,6 @@ def main():
     # calculate the end point of the year defined by the user_year
     ts_raw_end_index = ts_raw_base_index + len(doy_full)
 
-    #
-    ts_fit_base_index = len(doy_113) + len(doy_full) * doy_factors[user_year]["factor"]
-    ts_fit_end_index = ts_fit_base_index + len(doy_full)
-
-    print("ts_raw_base_index: ", ts_raw_base_index)
-    print("ts_raw_end_index : ", ts_raw_end_index)
-    print("ts_fit_base_index: ", ts_fit_base_index)
-    print("ts_fit_end_index:  ", ts_fit_end_index)
-    print()
     # get into raw dir and select year001
     os.chdir(os.path.join(in_dir_tf, tile))
     raw_data_list = sorted(glob.glob("*.%s.tif"%user_band))
@@ -309,15 +306,26 @@ def main():
     # write the epochs file names onto the dict
     for fit_product in used_fit_info_dict.keys():
         print("Fit Product: ", fit_product)
+        print("""fit_product == "fft" or "dft.elements_3.1.00_0.50_0.25_0.01" """, fit_product == "fft" or "dft.elements_3.1.00_0.50_0.25_0.01")
         used_fit_info_dict[fit_product]["root_dir"] = os.path.join(out_dir_fit, tile)
 
         # fft files start with year 2001-001!!!!!
         if fit_product == "fft":
             ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
+
+        elif fit_product == "dft.elements_3.1.00_0.50_0.25_0.01":
+            ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
+            ts_fit_end_index = ts_fit_base_index + len(doy_full)
         else:
             ts_fit_base_index = len(doy_113) + len(doy_full) * doy_factors[user_year]["factor"]
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
+
+        print("ts_raw_base_index: ", ts_raw_base_index)
+        print("ts_raw_end_index : ", ts_raw_end_index)
+        print("ts_fit_base_index: ", ts_fit_base_index)
+        print("ts_fit_end_index:  ", ts_fit_end_index)
+        print()
 
         full_ts = sorted(glob.glob("*.%s.%s.tif" % (user_band, fit_product)))
 
@@ -326,9 +334,7 @@ def main():
         print("search for: ", "*.%s.%s.tif" % (user_band, fit_product))
         print("Starting point fill TS: ", full_ts[0])
         print("Starting point fit raster epoch: ", used_fit_info_dict[fit_product]["files_list"][0])
-        print("Endiing point fit raster epoch : ", used_fit_info_dict[fit_product]["files_list"][-1])
-
-
+        print("Ending point fit raster epoch : ", used_fit_info_dict[fit_product]["files_list"][-1])
 
     cou = 0
     # read out the satellite data on the specific shape koordinates and attach it to the dict
@@ -375,7 +381,7 @@ def main():
             print("data: ", shp_info[ind]["fit_products"][indi]["fit_data_%d"%ind])
 
     # create a plot for the raster data TS
-    plot_ts_with_shape(shp_info)
+    plot_ts_with_shape(shp_info, user_band)
 
 
 

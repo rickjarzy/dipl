@@ -6,7 +6,7 @@ import time
 import socket
 import numpy
 from utils_numpy import write_fitted_raster_to_disk
-from utils_fft import init_data_block_dft, get_master_raster_info, multi_dft, update_data_block_dft, write_fitted_raster_to_disk_fft
+from utils_fft import init_data_block_dft, get_master_raster_info, multi_dft, update_data_block_dft, write_fitted_raster_to_disk_fft, create_dft_A_mat
 import fit_config
 
 """
@@ -75,25 +75,11 @@ if __name__ == "__main__":
 
         block = 2400
 
-        # Create A Matrix with partial differentiated Fourier Elements
-        A = numpy.ones([year, dft_elements * 2 + 1], dtype=float)
-        row = numpy.empty([dft_elements, 2], dtype=float)
-        ld = numpy.empty((block * block, year, 1), dtype=float)
-
-        for t in range(1, year + 1, 1):
-            for n in range(1, dft_elements + 1, 1):
-                da = numpy.cos((2 * numpy.pi / year) * (n) * t)
-                db = numpy.sin((2 * numpy.pi / year) * (n) * t)
-                row[n - 1, 0] = da
-                row[n - 1, 1] = db
-
-            A[t - 1, 1:] = row.reshape(1, dft_elements * 2)
-
-
+        A = create_dft_A_mat(dft_elements, block, year)
 
         weights = [1, 0.5, 0.25, 0.01]
 
-        name_weights_addition = ".dft.elements_%d.tif"%dft_elements
+        name_weights_addition = ".dft.elements_%d.%3.2f_%3.2f_%3.2f_%3.2f.tif"%(dft_elements, weights[0], weights[1], weights[2], weights[3])
 
         calc_from_to = [39, -14]                #39 = 2000361 - -14 =
 
@@ -141,6 +127,7 @@ if __name__ == "__main__":
 
                         print("\nStart fitting DFT year block - Nr %d out of %d \n-------------------------------------------" % (ts, len_list_data/sg_window))
                         print("Shape Datablock: ", data_block.shape)
+                        print("Shape Qualblock: ", qual_block.shape)
                         # FFT Logic Here
 
                         job_list_with_data_inidzes = []  # for mp pool
@@ -168,7 +155,7 @@ if __name__ == "__main__":
 
                         multi_dft(job_list_with_data_inidzes)
                         print("finished DFT in ", time.time() - start_interp_time, " [sec] ")
-                        break
+
                         write_fitted_raster_to_disk_fft(data_block, year_list_data, out_dir_fit, tile, master_raster_info, name_weights_addition)
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
@@ -223,7 +210,7 @@ if __name__ == "__main__":
                             shm_qual.close()
                             shm.unlink()
                             shm_qual.unlink()
-                            break
+
                         # except KeyboardInterrupt:
                         #     print("### PROGRAMM ENDED BY USER")
                         #     break

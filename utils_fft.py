@@ -538,8 +538,22 @@ def update_data_block_dft(data_block, qual_block, in_dir_tf, in_dir_qs, tile, li
     return data_block, qual_block
 
 
+def create_dft_A_mat(dft_elements, block, year):
+    # Create A Matrix with partial differentiated Fourier Elements
+    A = numpy.ones([year, dft_elements * 2 + 1], dtype=float)
+    row = numpy.empty([dft_elements, 2], dtype=float)
+    ld = numpy.empty((block * block, year, 1), dtype=float)
 
+    for t in range(1, year + 1, 1):
+        for n in range(1, dft_elements + 1, 1):
+            da = numpy.cos((2 * numpy.pi / year) * (n) * t)
+            db = numpy.sin((2 * numpy.pi / year) * (n) * t)
+            row[n - 1, 0] = da
+            row[n - 1, 1] = db
 
+        A[t - 1, 1:] = row.reshape(1, dft_elements * 2)
+
+    return A
 def multi_dft(job_list):
 
     with multiprocessing.Pool() as pool:
@@ -556,7 +570,7 @@ def perform_dft(input_info, plot=False):
     # check if poly calculation is on to be executed, because then there must be an additional key in the dictionary
     poly = False
     reference_to_data_block = numpy.ndarray(input_info["dim"], dtype=numpy.float64, buffer=existing_shm.buf)[:, input_info["from"]:input_info["to"], :]
-    reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.int16, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
+    reference_to_qual_block = numpy.ndarray(input_info["dim"], dtype=numpy.float64, buffer=existing_shm_qual.buf)[:, input_info["from"]:input_info["to"], :]
     # get data to process out of buffer
 
     A = input_info["A"]
@@ -568,53 +582,84 @@ def perform_dft(input_info, plot=False):
     data_mat = reference_to_data_block.reshape(reference_to_data_block.shape[0],
                                                reference_to_data_block.shape[1] * reference_to_data_block.shape[2])
 
-    qual_mat = reference_to_data_block.reshape(reference_to_qual_block.shape[0],
+    qual_mat = reference_to_qual_block.reshape(reference_to_qual_block.shape[0],
                                                reference_to_qual_block.shape[1] * reference_to_qual_block.shape[2])
-
+    print("Start DFT in process nr: ", input_info["process_nr"])
+    sing_cou = 0
     for i in range(0, data_mat.shape[1],1):
         # check if nan fields are in a vector - if yes interpolate linear on that spots
         # at the qual vector the indizes of where data is nan should allready be set to zero ( see in main file )
         data_mat_v_nan = numpy.isfinite(data_mat[:, i])
         data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
-        print(i)
+
         if False in data_mat_v_nan:
             # interpolate on that spots
-            data_mat_v = numpy.round(numpy.interp(data_mat_v_t,
+            try:
+                data_mat_v = numpy.round(numpy.interp(data_mat_v_t,
                                                          data_mat_v_t[data_mat_v_nan],
                                                          data_mat[:, i][data_mat_v_nan]))
-
+            except:
+                #print("crash ")
+                #print(data_mat[:, i])
+                continue
 
         else:
             data_mat_v = data_mat[:, i]
 
-        qual_mat_v = qual_mat[:, i]
-
-        P = numpy.ones()
+        qual_mat_v = qual_mat[:, i].reshape(len(data_mat_v),1)
+        data_mat_v = data_mat_v.reshape(len(data_mat_v),1)
 
         # ATPA
-        print("data shape: ", data_mat_v.shape)
-        print("qual shape: ", qual_mat_v.shape)
-        print("A.shape   : ", A.shape)
-        print("A.T shape : ", A.T.shape)
-        ATPA = numpy.dot(numpy.dot(A.T, qual_mat_v), A)
 
-        # ATPL
-        ATPL = numpy.dot(numpy.dot(A.T,qual_mat_v), data_mat_v)
+        try:
+            P = numpy.eye(len(data_mat_v)) * qual_mat_v
+            ATPA = numpy.linalg.inv(numpy.dot(numpy.dot(A.T,P),A))
+            ATPL = numpy.dot(numpy.dot(A.T, P), data_mat_v)
+            x_hat = numpy.dot(ATPA, ATPL)
 
-        x_hat = numpy.dot(ATPA, ATPL)
+            l_hat = numpy.dot(A, x_hat)
 
-        l_hat = numpy.dot(A, x_hat)
+            data_mat[:, i] = l_hat.reshape(len(l_hat))
+        except:
+            # print("singular matrix")
+            sing_cou += 1
+            # for e in range(0, len(data_mat_v), 1):
+            #     print("data: ", data_mat_v[e], " - qual:", qual_mat_v[e])
+            continue
 
-        print("DFT x_HAT: ")
 
-        break
 
+        # ------------------------------------------
+        # optimize to using vektors and not matrizes
+        # ------------------------------------------
+
+        # APv = numpy.multiply(A,qual_mat_v)
+        # # check singular matrix --> maybe try/except implement
+        # ATPA = numpy.linalg.inv(numpy.dot(APv.T, A))
+        # # ATPL
+        # ATPL = numpy.dot(APv.T, data_mat_v)
+        # x_hat = numpy.dot(ATPA, ATPL)
+        # l_hat = numpy.dot(A, x_hat)
+        # qual_mat[:, i] = l_hat.reshape(len(l_hat))
+
+
+        # print("APv: ", APv)
+        # print("ATPA.shape", ATPA.shape)
+        # print("data shape: ", data_mat_v.shape)
+        # print("qual shape: ", qual_mat_v.shape)
+        # #print("data: ", data_mat_v)
+        # #print("qual: ", qual_mat_v)
+        # print("A.shape   : ", A.shape)
+        # print("A.T shape : ", A.T.shape)
+        # print("DFT x_HAT: ", x_hat)
+        # print("lhat:", l_hat)
 
     # strore orig time, cols and row information - needed for reshaping
     orig_time = reference_to_data_block.shape[0]
     orig_rows = reference_to_data_block.shape[1]
     orig_cols = reference_to_data_block.shape[2]
 
+    print("-  finished process %d - singular matrix count " % input_info["process_nr"], sing_cou)
 
     # save interpolation results on the shared memory object
     reference_to_data_block[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols))
