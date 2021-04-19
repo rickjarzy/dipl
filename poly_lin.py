@@ -67,7 +67,7 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.01, 0.01]
+        weights = [1, 0.5, 0.25, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         calc_from_to = [352, 0]
@@ -96,9 +96,9 @@ if __name__ == "__main__":
 
             else:
 
-                for ts_epoch in range(calc_from_to[0], len_list_data, 1):
+                for ts_epoch in range(0, len_list_data, 1):
                     epoch_start = time.time()
-                    ref_ras_epoch = list(range(calc_from_to[0], len_list_data, 1))
+                    ref_ras_epoch = list(range(0, len_list_data, 1))
 
                     if ts_epoch == ref_ras_epoch[0]:
                         try:
