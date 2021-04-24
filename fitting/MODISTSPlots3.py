@@ -272,7 +272,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2002
+    user_year = 2007
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
