@@ -272,7 +272,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2007
+    user_year = 2013
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
@@ -316,6 +316,10 @@ def main():
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
 
         elif fit_product == "dft.elements_3.1.00_0.50_0.25_0.01":
+            ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
+            ts_fit_end_index = ts_fit_base_index + len(doy_full)
+
+        elif fit_product == "dft.elements_3.1.00_0.01_0.01_0.01":
             ts_fit_base_index = len(doy_full) * doy_factors[user_year]["factor"]
             ts_fit_end_index = ts_fit_base_index + len(doy_full)
         else:

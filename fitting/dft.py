@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
         A = create_dft_A_mat(dft_elements, block, year)
 
-        weights = [1, 0.5, 0.25, 0.01]
+        weights = [1, 0.01, 0.01, 0.01]
 
         name_weights_addition = ".dft.elements_%d.%3.2f_%3.2f_%3.2f_%3.2f.tif"%(dft_elements, weights[0], weights[1], weights[2], weights[3])
 

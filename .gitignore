@@ -12,3 +12,4 @@ fit_config.py
 *.patch
 test_fft.py
 python/**
+fitting/__pychache__/**
