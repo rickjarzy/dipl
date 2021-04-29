@@ -40,3 +40,4 @@ Cuda compilation tools, release 10.1, V10.1.168
 
 
 /sbin/ldconfig -N -v $(sed ‘s/:/ /’ <<< $LD_LIBRARY_PATH) 2>/dev/null | grep libcudnn
+
