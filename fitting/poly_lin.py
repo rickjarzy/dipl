@@ -70,7 +70,7 @@ if __name__ == "__main__":
         weights = [1, 0.01, 0.01, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-        calc_from_to = [352, 0]
+        calc_from_to = [300, 400]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -82,10 +82,10 @@ if __name__ == "__main__":
 
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
-            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:]
+            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:calc_from_to[1]]
 
             os.chdir(os.path.join(in_dir_tf, tile))
-            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))[calc_from_to[0]:]
+            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))[calc_from_to[0]:calc_from_to[1]]
             len_list_data = len(list_data)
             # check if qual and sat data have the same amount of files
             if int(len(list_qual)) != int(len(list_data)):
