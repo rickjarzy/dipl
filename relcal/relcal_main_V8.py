@@ -33,7 +33,11 @@ start = time.clock()
 modis_fit_type_info = dict()
 modis_fit_type_info["dft_1"] = {"dir": "dftelements_3100_001_001_001", "short_desc": ".dft_1", "min_epoch_year": "2001", "min_epoch_doy": "001"}
 modis_fit_type_info["dft_2"] = {"dir": "dftelements_3100_050_025_001", "short_desc": ".dft_2", "min_epoch_year": "2001", "min_epoch_doy": "001"}
+<<<<<<< HEAD
 modis_fit_type_info["fft"] = {"dir": "fft", "short_desc":".fft" , "min_epoch_year": "2001", "min_epoch_doy": "001"}
+=======
+modis_fit_type_info["fft"] = {"dir": "fft", "short_desc":".fft" , "min_epoch_year": "2001", "min_epoch_doy": "1"}
+>>>>>>> 6a17d47 (added logic to check if oldest MODIS stack epoch is older the oldest LS epoch)
 modis_fit_type_info["poly_1"] = {"dir": "poly_lin_win15weights1_001_001_001", "short_desc": ".poly_1", "min_epoch_year": "2000", "min_epoch_doy": "113"}
 modis_fit_type_info["poly_2"] = {"dir": "poly_lin_win15weights1_05_025_001", "short_desc": ".poly_2", "min_epoch_year": "2000", "min_epoch_doy": "113"}
 

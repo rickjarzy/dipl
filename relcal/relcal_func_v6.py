@@ -10,9 +10,6 @@ from osgeo.osr import *
 from scipy import stats, ndimage, odr
 
 
-
-
-
 def linOdrFit(params,x):
     return params[0]+params[1]*x
 
@@ -373,15 +370,6 @@ def agg(out_path,out_ras,out_qal,ref_info_mo,bands,driver,sat_raw,CaliDataType):
     DMPx_UL[1,1] = DMPx_UL[0,1] - ref_info_mo[1][1]
                         
 
-                                 
-        
-    
-
-
-
-
-    
-
     
     # aggregate bands
     block = int(ref_info_mo[1][1]/ref_info_agg[1][1])
@@ -589,7 +577,7 @@ def agg(out_path,out_ras,out_qal,ref_info_mo,bands,driver,sat_raw,CaliDataType):
         # Moving window Focal Mean
         print "Focal Mean for band"
         mask = numpy.ones([3,3])
-        dataFocal= ndimage.filters.generic_filter(ras_agg,FocalMean,size=3,footprint=mask,cval=numpy.nan,mode='constant')
+
         data_agg = numpy.nan_to_num(dataFocal)
         writeOnBand(stackFocal,b+1,data_agg,32767)
 
