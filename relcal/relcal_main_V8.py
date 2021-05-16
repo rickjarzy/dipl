@@ -15,8 +15,7 @@
 
 
 
-import os, time, glob, numpy
-from relcal import relcal_func_v6
+import os, time, glob, numpy, relcal_func_v6
 from osgeo import gdal
 from osgeo.gdal import *
 from osgeo.gdalconst import *
@@ -27,57 +26,47 @@ from scipy import ndimage
 from scipy import odr
 
 start = time.clock()
-## Paul Firma
-##in_dir   = r"J:\test\relcal\p196_027\LE71960272005245MSP"
-##in_dir  = r"Z:\s2biom\hr\original"
-##out_dir  = r"J:\Diplom_Daten\test"
-##demo_mcd = r"J:\MODIS_TILES_STACKED\h18v04\2001\MCD43A4.A2001001.h18v04.tif"
-##mod_dir  = r"J:\MODIS_TILES_STACKED\h18v04"
-
-### Paul Home
-##in_dir   = r"I:\Diplomarbeit\daten\LANDSAT_STACK\checjk"
-##out_dir  = r"I:\Diplomarbeit\daten\LANDSAT_RelCal"
-##demo_mcd = r"I:\Diplomarbeit\daten\MODIS_TILES_STACKED\2004\MCD43A4.A2004001.h18v04.tif"
-##mod_dir  = r"I:\Diplomarbeit\daten\MODIS_TILES_STACKED"
 
 # Paul Home Extern Platte
 ### Paul Home
+
+modis_fit_type_info = dict()
+modis_fit_type_info["dft_1"] = {"dir": "dftelements_3100_001_001_001", "short_desc":".dft_1" }
+modis_fit_type_info["dft_2"] = {"dir": "dftelements_3100_050_025_001", "short_desc":".dft_2" }
+modis_fit_type_info["fft"] = {"dir": "fft", "short_desc":".fft" }
+modis_fit_type_info["poly_1"] = {"dir": "poly_lin_win15weights1_001_001_001", "short_desc":".poly_1" }
+modis_fit_type_info["poly_2"] = {"dir": "poly_lin_win15weights1_05_025_001", "short_desc":".poly_2" }
+
+calibrate_that = "dft_1"
+
+modis_fit_type = modis_fit_type_info[calibrate_that]["short_desc"]
+modis_stack_dir = modis_fit_type_info[calibrate_that]["dir"]
+
+listCaliDataType = [".relcal_500.V6",".abscal.OLS.V6",".numpy_relcal_500.V6",".scipy_relcal_500.V6", ".scipy_odr_500.V6"]
+listCaliDataType = [calitype + modis_fit_type for calitype in listCaliDataType]
+
+
 in_dir   = r"E:\LANDSAT_STACK\S2BIOM\relcal_196027"
 out_dir  = r"E:\LANDSAT_STACK"
-demo_mcd = r"E:\MODIS_TILES_STACKED\h18v04\2004\MCD43A4.A2004001.h18v04.tif"
-mod_dir  = r"E:\MODIS_TILES_STACKED\h18v04"
 
-### Paul Firma 2
-##in_dir   = r"E:\Diplom_Daten\test\relcal\p196_027\LE71960272005149MSP"
-###in_dir  = r"Z:\s2biom\hr\original"
-##out_dir  = r"E:\Diplom_Daten\test"
-##demo_mcd = r"E:\MODIS_TILES_STACKED\h18v04\2001\MCD43A4.A2001001.h18v04.tif"
-##mod_dir  = r"E:\MODIS_TILES_STACKED\h18v04"
+mod_dir  = os.path.join(r"E:\MODIS_Data\v6\stacked\h18v04", modis_stack_dir)
+demo_mcd = os.path.join(mod_dir,  r"MCD43A4.A2004001.h18v04.006." + modis_fit_type_info[calibrate_that]["dir"] + ".tif")
 # Create List with Modis DOY
 
-list_mod={}
-list_mod_src = {}
-cou = 0
-dirs = os.listdir(mod_dir)
-dirs.sort()
+
 # create list with all modis images
-for i in range(0,len(dirs),1):
-    os.chdir(os.path.join(mod_dir, dirs[i]))
-    inhalt = glob.glob('*.tif')     # contains all *.tifs from Landsat directory
-    for t in range(0,len(inhalt),1):
-        list_mod[cou]=inhalt[t]     # list with all modis filenames, no paths
-        list_mod_src[cou] = os.path.join(mod_dir,dirs[i],inhalt[t]) # create list with all modis paths
-        cou +=1
+os.chdir(os.path.join(mod_dir))
+inhalt = sorted(glob.glob('*.tif'))     # contains all *.tifs from Landsat directory
+
 
 # create list with all modis doy info   
-time_mod = numpy.ones([len(list_mod),1],dtype=int)      
-time_src = numpy.ones([len(list_mod),1],dtype=object)   
+time_mod = numpy.ones([len(inhalt),1],dtype=int)
+time_src = numpy.ones([len(inhalt),1],dtype=object)
 
 for i in range(0,len(time_mod),1):
-    time_mod[i]=int(list_mod[i].split('.')[1][1:])      # contains [year+doy]
-    time_src[i]= list_mod_src[i]                        # contains modis paths
+    time_mod[i]=int(inhalt[i].split('.')[1][1:])      # contains [year+doy]
+    time_src[i]= os.path.join(mod_dir, inhalt[i])                        # contains modis paths
 
-del list_mod_src
 
 
 # Extract Reference Information    
@@ -95,7 +84,10 @@ res = 30.88751              # manuelle berechnung der aufloesung fur landsat dam
 win = 1                     # anzahl der vorher/nachherszenen um die landsatszene
 med = range(0,2*win+1,1)    # sitz der landsatszene in einer zeitreihe
 block_agg = 15*3
+
 # ================================
+
+
 
 
 
@@ -108,23 +100,16 @@ for roots, dirs, files in os.walk(in_dir):
     os.chdir(roots)
     inhalt  = glob.glob('L*.tif')
 
-
-    
     if inhalt:
         in_path  = roots                        # path to Landsat directory
         sat_date = roots.split("\\")[-1][9:16]   # date of akquisitin of the raw landsat szene
-        
-        
-        
-
-
 
         # V0 relcal/abscal ohne Ausreisser mit ausgleichsgerade
         # V1 relcal/abscal ohne ausreisser mit scipy lin regress
         # V2 relcal/abscal mit ausreisser mit scipy lin regress
-        
+
         #Define "Raw"-Data
-        listCaliDataType = [".relcal_500",".abscal.OLS",".numpy_relcal_500",".scipy_relcal_500", ".scipy_odr_500"]
+
         CaliDataType = listCaliDataType[4]
         plots_dir = roots+"\\"+"plots_"+CaliDataType[1:]
 
@@ -135,7 +120,7 @@ for roots, dirs, files in os.walk(in_dir):
            
         # create file for statistics
         
-        if CaliDataType == ".abscal.OLS":
+        if CaliDataType == ".abscal.OLS.V6":
             ls_ms    = glob.glob('ls*.msp.tif')     # absolute calibrated LandsatSzene
             #sat_raw = ls_ms[0]
             if ls_ms:
@@ -297,7 +282,7 @@ for roots, dirs, files in os.walk(in_dir):
         ls_orig_refinfo[1] = ls_orig.GetGeoTransform()
 
         # Raster for Relative Calibrated Satellite Szene in Original Resolution and Reference System
-        if CaliDataType == ".abscal.OLS":
+        if CaliDataType == ".abscal.OLS.V6":
             NameRelCalOrigLS = sat_raw[:-4]+".calibrated"+CaliDataType+".tif"
         else:
             NameRelCalOrigLS = sat_raw[:-4]+".calibrated"+CaliDataType+".tif"
@@ -384,7 +369,7 @@ for roots, dirs, files in os.walk(in_dir):
             mo_500B.FlushCache()
             del modtmpFoc
             
-            print "First MODIS Pixel UL: \t",sat_data[0,0,0]
+            print "First MODIS V6 Pixel UL: \t",sat_data[0,0,0]
 
             # Ausgleich
             # =================================================================
@@ -509,25 +494,19 @@ for roots, dirs, files in os.walk(in_dir):
 
             
             #Create Difference Rasters For actual MODIS band and aggregated calibrated LandsatBand
-            diffRasName = os.path.join(plots_dir,"Diff.LS_Band_"+str(sat_bands[band])+"."+sat_raw[:-4]+".tif")
+            diffRasName = os.path.join(plots_dir,"Diff.V6.LS_Band_"+str(sat_bands[band])+"."+sat_raw[:-4]+".tif")
             diffRas = relcal_func_v6.createRas(driver_tif, diffRasName, agg_cols, agg_rows, 1, gdalconst.GDT_Float32, ref_info_agg)
             diffRasData = moDataFoc-fit_agg
             relcal_func_v6.writeOnBand(diffRas, 1, diffRasData, -9999)
 
             spd = figDif.add_subplot(3,2,band+1)
             difim = spd.imshow(diffRasData)
-            titleDif = "Differenzen MOD Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band])
+            titleDif = "Differenzen MOD V6 Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band])
             spd.set_title(titleDif)
-            plt.suptitle(" - "+sat_raw[:-9]+" -\n- Differenzraster MODIS zu Landsat - ",fontsize=20)
+            plt.suptitle(" - "+sat_raw[:-9]+" -\n- Differenzraster MODIS V6 zu Landsat - ",fontsize=20)
             plt.close()
 
-            
-            
-            
 
-            
-
-            
             fitv_agg = fit_agg.reshape(fit_agg.shape[0]*fit_agg.shape[1])
             #fitv_agg = fitv_agg[numpy.isnan(fitv_agg)==False]
 
@@ -556,11 +535,7 @@ for roots, dirs, files in os.walk(in_dir):
             #Variationskoeffizient
             v_fit= numpy.std(fitAgg)/numpy.mean(fitAgg)
             v_lv = numpy.std(lv)/numpy.mean(lv)
-            
 
-            
-
-            
             
             # Matplotlib - Creating Plot for relative calibrated band, compare to MODIS Band and write them into pdf File
             # ===========================================================================================================
@@ -570,7 +545,7 @@ for roots, dirs, files in os.walk(in_dir):
             fit_fn = numpy.poly1d(numpy.array([b1,b0]))
             xv = numpy.arange(0,numpy.nanmax(av1),1)
             ziel.write("\n\n------------------------------------------------\n")
-            ziel.write("\t"+ CaliDataType + "\n - "+ "MOD Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band]) + "\n b0: %5.4f "%b0+"|  b1: %5.4f"%b1+"\n")
+            ziel.write("\t"+ CaliDataType + "\n - "+ "MOD V6 Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band]) + "\n b0: %5.4f "%b0+"|  b1: %5.4f"%b1+"\n")
             if CaliDataType=='.scipy_odr_500':
                 # Residuen
                 v = paramsODR.delta
@@ -638,10 +613,10 @@ for roots, dirs, files in os.walk(in_dir):
             sp1 = fig.add_subplot(3,2,band+1)        # add subplot to defined figure
             pw1 = sp1.plot(av1,lv,'.k',markersize=0.1,label='Punktwolke Daten')
             rg1 = sp1.plot(xv,fit_fn(xv),'--r',markersize=0.1,label='Regressionsgerade')            
-            titleNu ="    "+ CaliDataType + "\n - "+ "MOD Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band]) + "\n b0: %5.4f "%b0+"|  b1: %5.4f"%b1
+            titleNu ="    "+ CaliDataType + "\n - "+ "MOD V6 Band "+str(mod_bands[band])+" | LS Band "+str(sat_bands_beschriftung[band]) + "\n b0: %5.4f "%b0+"|  b1: %5.4f"%b1
             sp1.set_title(titleNu)
             plt.suptitle(" - "+sat_raw[:-9]+" - \nRegression",fontsize=20)
-            if CaliDataType==".abscal.OLS":
+            if CaliDataType==".abscal.OLS.V6":
                 sp1.set_xlabel('Landsat [Reflectance]')
 
             else:
@@ -658,9 +633,9 @@ for roots, dirs, files in os.walk(in_dir):
             sp2 = fig2.add_subplot(3,2,band+1)
             pw2 = sp2.plot(lv,v,'.k',markersize=0.25,label='Punktwolke Residuen')
             rg2 = sp2.plot(ev,erw_fn(ev),'--r',markersize=0.25,label='E(X) Residuen')
-            title2 = "    "+CaliDataType+"\n   Residuen ueber MODIS Band" + str(mod_bands[band]) + "\nErwartungswert Residuen : %5.4f"%v.mean()
+            title2 = "    "+CaliDataType+"\n   Residuen ueber MODIS V6 Band" + str(mod_bands[band]) + "\nErwartungswert Residuen : %5.4f"%v.mean()
             sp2.set_title(title2)
-            plt.suptitle(" - "+sat_raw[:-9]+" - \n - Residuen ueber MODIS - ",fontsize=20)
+            plt.suptitle(" - "+sat_raw[:-9]+" - \n - Residuen ueber MODIS V6 - ",fontsize=20)
             sp2.set_xlabel('MODIS Reflectance [%]')
             sp2.set_ylabel('Residuum [%]')
             sp2.legend(bbox_to_anchor=(0.30, 1), loc=1)
@@ -670,7 +645,7 @@ for roots, dirs, files in os.walk(in_dir):
             sp3 = fig3.add_subplot(3,2,band+1)
             pw3 = sp3.plot(fitAgg,v,'.k',markersize=0.25,label='Punktwolke Residuen')
             ew3 = sp3.plot(ev,erw_fn(ev),'--r',markersize=0.25,label='E(X) Residuen')
-            title3 = "    "+CaliDataType+"\n   Schaetzung ueber MODIS Band" + str(mod_bands[band]) + "\nErwartungswert Residuen : %5.4f"%v.mean()
+            title3 = "    "+CaliDataType+"\n   Schaetzung ueber MODIS V6 Band" + str(mod_bands[band]) + "\nErwartungswert Residuen : %5.4f"%v.mean()
             sp3.set_title(title3)
             plt.suptitle(" - "+sat_raw[:-9]+" - \n - Residuen ueber Schaetzungen - ",fontsize=20)
             sp3.set_xlabel('Schaetzung-Reflexion [%]')
@@ -684,17 +659,17 @@ for roots, dirs, files in os.walk(in_dir):
         figDif.colorbar(difim, cbar_ax)
             
             
-        figName  = sat_raw[:-9]+" Kalibrierung Landsat zu MODIS "    + CaliDataType+".png"
+        figName  = sat_raw[:-9]+" Kalibrierung Landsat zu MODIS V6 "    + CaliDataType+".png"
         fig.savefig(os.path.join(plots_dir,figName),dpi=300)
 
-        figName2 = sat_raw[:-9] + " Residuen ueber MODIS " +CaliDataType[1:]+".png"
+        figName2 = sat_raw[:-9] + " Residuen ueber MODIS V6 " +CaliDataType[1:]+".png"
         fig2.savefig(os.path.join(plots_dir,figName2),dpi=300)
         
 
         figName2 = sat_raw[:-9]+" Residuen ueber Schaetzwerte "+CaliDataType[1:]+".png"
         fig3.savefig(os.path.join(plots_dir,figName2),dpi=300)
         
-        figNameDif = sat_raw[:-9]+" Differenz MODIS zu agg Landsat "+CaliDataType[1:]+".png"
+        figNameDif = sat_raw[:-9]+" Differenz MODIS V6 zu agg Landsat "+CaliDataType[1:]+".png"
         figDif.savefig(os.path.join(plots_dir,figNameDif),dpi=300)
                                   
             
@@ -708,10 +683,10 @@ for roots, dirs, files in os.walk(in_dir):
         print "Kein Inhalt"
         continue
     
-if ziel:
-    ziel.close()
-else:
-    print "Kein Statsfile angelegt"
+    if ziel:
+        ziel.close()
+    else:
+        print "Kein Statsfile angelegt"
     
 ende = time.clock()
 print "Programm ENDE"
