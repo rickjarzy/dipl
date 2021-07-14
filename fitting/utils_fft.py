@@ -242,7 +242,7 @@ def update_data_block_sg_fft(data_block_raw, data_block, qual_block, in_dir_tf, 
     return data_block_raw, data_block, qual_block, fitted_raster_band_name
 
 
-def perform_fft(input_info, plot=False):
+def perform_fft(input_info, plot=True):
 
 
     print("\nspawn FFT process nr : ", input_info["process_nr"])

@@ -70,4 +70,12 @@ Lit Fitting Methoden - https://opengeospatialdata.springeropen.com/articles/10.1
 
 Die Daten liegen als einzelene Bänder nach ihren tiles in eigenen Verzeichnissen dem Aufnahmedatum sortiert auf. Format ist GeoTIFF und die Projektion ist Sinusoidal.
 
+########################################
+FAST FOURIER TRANSFORMATION
+########################################
+Verwendete Links
+[1] https://www.nti-audio.com/de/service/wissen/fast-fourier-transformation-fft
+
+
+
 

@@ -234,7 +234,7 @@ def fitq_mp(lv, pv, xv, sg_window):
     # lv ... Beobachtungsvektor = Grauwerte bei MODIS in Prozent z.B. (15, 12 ....)
     # pv ... Gewichtsvektor mit  p = 1 fuer MCD43A2 = 0 0.2 bei MCD43A2=1 (bei MODIS) in erster
     # Iteration, der bei den weiteren Iterationen entsprechend ueberschrieben wird.
-    # xv ... Zeit in day of year. Damit die Integerwerte bei Quadrierung nicht zu groß werden anstatt
+    # xv ... Zeit in day of year. Damit die Integerwerte bei Quadrierung nicht zu gross werden anstatt
     # direkte doy's die Differenz zu Beginn, also beginnend mit 1 doy's
     # A [ax0, ax1, ax2] Designmatrix
     # Formeln aus

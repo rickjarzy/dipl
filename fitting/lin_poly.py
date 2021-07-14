@@ -77,7 +77,7 @@ if __name__ == "__main__":
         weights = [1, 0.5, 0.25, 0.01, 0.01]
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
-        calc_from_to = [0, 355]
+        calc_from_to = [0, 927]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -117,9 +117,6 @@ if __name__ == "__main__":
 
                         qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
-
-                        #todo: überlegen ob man nicht für links und rechtsseitig der zentralen bildmatrix einen linearen fit machen will wenn zu wenige daten sind
-                        #todo: fit aus check für cuda und numpy implementieren dann geht die sache in produktion
 
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
 
