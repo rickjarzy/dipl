@@ -156,7 +156,7 @@ def read_out_shp_koord(shp_path):
     return return_dict
 
 
-def plot_ts_with_shape(input_dict, input_band):
+def plot_ts_with_shape(input_dict, input_band, input_year):
 
     x_axe_data = numpy.array(range(0,46,1))
 
@@ -173,7 +173,7 @@ def plot_ts_with_shape(input_dict, input_band):
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
-        ax.set_title("FFT Comparison - %s" % location_desc)
+        ax.set_title("Fitting Method Comparison - %s - Year %d" % (location_desc, input_year))
         # iterate through the fit products and create for each shape id a plot and show it
 
         best_qual = numpy.array(input_dict[shape_id]["quality_%d"%shape_id])
@@ -202,13 +202,15 @@ def plot_ts_with_shape(input_dict, input_band):
         ax.plot(x_axe_data, fill_value, 'bo', label="Fill Value")
         ax.plot(x_axe_data, nan_values, 'ko', label="NaN Values")
 
-        ax.set_xlabel("Epoch Nr of Year %s" % plotted_year)
+        ax.set_xlabel("Day Of Year From Year %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
+        ax.set_xticks(list(range(0,46,1)))
+        ax.set_xticklabels([str(i) for i in range(1,365,8)])
 
         if input_band == "band_1":
-            y_limits = [0, 3500]
+            y_limits = [0, 33000]
         elif input_band == "band_2":
-            y_limits = [0, 6500]
+            y_limits = [0, 33000]
 
         ax.set_ylim(y_limits)
         plt.legend()
@@ -386,7 +388,7 @@ def main():
             print("data: ", shp_info[ind]["fit_products"][indi]["fit_data_%d"%ind])
 
     # create a plot for the raster data TS
-    plot_ts_with_shape(shp_info, user_band)
+    plot_ts_with_shape(shp_info, user_band, user_year)
 
 
 
