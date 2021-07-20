@@ -173,7 +173,7 @@ def plot_ts_with_shape(input_dict, input_band, input_year):
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
-        ax.set_title("Fitting Method Comparison - %s - Year %d" % (location_desc, input_year))
+        ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band))
         # iterate through the fit products and create for each shape id a plot and show it
 
         best_qual = numpy.array(input_dict[shape_id]["quality_%d"%shape_id])
@@ -208,9 +208,9 @@ def plot_ts_with_shape(input_dict, input_band, input_year):
         ax.set_xticklabels([str(i) for i in range(1,365,8)])
 
         if input_band == "band_1":
-            y_limits = [0, 33000]
+            y_limits = [0, 5000]
         elif input_band == "band_2":
-            y_limits = [0, 33000]
+            y_limits = [0, 10000]
 
         ax.set_ylim(y_limits)
         plt.legend()
@@ -223,7 +223,7 @@ def main():
 
     print("Start Processing Plots for yearwise timeseries")
     # 2T USB3 Festplatte und Home Rechner
-    if socket.gethostname() in ['XH-AT-NB-108', 'Paul-PC']:
+    if socket.gethostname() in ['XH-AT-NB-108', 'Paul-PC', 'DESKTOP-8K4K22S']:
         in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
@@ -241,6 +241,12 @@ def main():
         in_dir_qs =   r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A2"
         in_dir_tf =   r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A4"
         out_dir_fit = r"/home/iot/scripts/dev/projects/timeseries/data/v6/fitted"
+
+    elif os.name == "nt" and socket.gethostname() == "DESKTOP-8K4K22S":
+        in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
+        in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
+        out_dir_fit = r"E:\MODIS_Data\v6\fitted"
+        shp_dir     = r"C:\Users\paulo\Documents\Entwicklung\Python\UNI\Diplomarbeit\shp\checkFitPlots"
     else:
         in_dir_qs =   r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf =   r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
