@@ -13,3 +13,4 @@ fit_config.py
 test_fft.py
 python/**
 fitting/__pychache__/**
+*.pyc

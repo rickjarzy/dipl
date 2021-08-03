@@ -11,6 +11,7 @@ Used Links:
 [7]https://ladsweb.modaps.eosdis.nasa.gov/filespec/MODIS/6/MCD43A2
 [8]https://lpdaac.usgs.gov/products/mcd43a4v006/
 [9]https://www.umb.edu/spectralmass/terra_aqua_modis/v006/mcd34a4_nbar_product
+[10]https://e4ftl01.cr.usgs.gov/MOTA/
 
 MODIS Data General Describtion: 
 ===============================
@@ -32,6 +33,7 @@ Datenfromat: HDF4 Stack
 
 MCD43A2 Quality Product
 ==========================
+
 
 
 Die Beobachtungen sind auf den neunten Tag der 16 Tages Periode gewichtet[3]. Dies f�hrt auch zu einer besseren Quali�t in h�heren Breiten. Im Vergleich hierzu Version 5 verwendet ein 
