@@ -129,13 +129,13 @@ if __name__ == "__main__":
                         print(data_block[:,plot_indizess[0], plot_indizess[1]])
 
                         # interpolate linear on nan values
-                        # - keep in mind - shit data will allways stay shit data
+                        # - keep in mind - shit data will always stay shit data
 
 
                         job_list_with_data_inidzes = []             # for mp pool
                         cou = 0
                         start_interp_time = time.time()
-
+                        data_before_lin_interp = data_block[:, plot_indizess[0], plot_indizess[1]]
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
                             print(part)
@@ -156,7 +156,8 @@ if __name__ == "__main__":
 
                         print("- delta_lv.shape: ", delta_lv.shape)
 
-                        # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
+                        # plot_raw_data(data_before_lin_interp,
+                        #               data_block[:, plot_indizess[0], plot_indizess[1]],
                         #               qual_block[:, plot_indizess[0], plot_indizess[1]],
                         #               weights,
                         #               fit[:, plot_indizess[0], plot_indizess[1]])

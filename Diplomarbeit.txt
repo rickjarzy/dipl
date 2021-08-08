@@ -46,7 +46,7 @@ Fenster von nur vier Beobachtungen pro Tag. [3]. Die Qualit�tsinformation f�
 Der Fill value ist mit 255, dem NoData Value gleichzusetzen.
 
 MCD43A4 NBAR Data
-=================
+================= []
 
 MODIS MCD43A4 Version 6 ist ein Nadir BRDF angepasstes Reflexionsprodukt (NBAR) aus ebenfalls 16 t�gigen Aqua und Terra Daten. Die Daten werden f�r den Sonnenh�chststand derTagesepoche berechnet [9].
 Daraus resultiert ein stabiles und konsistentes NBAR Produkt. Die Daten werden mit einem �berblicksartigen Qualitylayer f�r jedes Band in einem HDF Stack verspeichert. Es wird jedoch explizit darauf hingewiesen, 
