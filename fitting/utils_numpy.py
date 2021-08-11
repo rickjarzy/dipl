@@ -64,6 +64,38 @@ def perfom_fft(data_block):
     plt.legend()
     plt.show()
 
+def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, qual_weights_array):
+    print("Accessing Raw - Interp - Fitted Data Plot")
+    qual_factor = 100
+    n = raw_array.shape[0]
+    t = numpy.arange(0, n, 1)
+    print("here")
+
+    good_qual = numpy.where(qual_data_array == qual_weights_array[0],qual_weights_array[0],numpy.nan) * qual_factor
+    okay_qual = numpy.where(qual_data_array == qual_weights_array[1], qual_weights_array[1], numpy.nan) * qual_factor
+    bad_qual  = numpy.where(qual_data_array == qual_weights_array[2],qual_weights_array[2], numpy.nan) * qual_factor
+    really_bad_qual = numpy.where(qual_data_array == qual_weights_array[3], qual_weights_array[3], numpy.nan) * qual_factor
+
+    fig, axs = plt.subplots(1, 1)
+
+#    plt.sca(axs[0])
+    plt.plot(t, raw_array, color='c', LineWidth=3, label="raw data")
+    plt.plot(t, interp_array, color='k', LineWidth=1, linestyle='--', label='lin interp')
+    plt.plot(t, fitted_array,  color='b', LineWidth=2, label='Poly Filtered data')
+
+    plt.plot(t, good_qual, 'go', label="Good Quality")
+    plt.plot(t, okay_qual, 'yo', label="Okay Quality")
+    plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
+    plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+
+    plt.xlim(t[0], t[-1])
+    plt.ylabel("Intensity [%]")
+    plt.xlabel("Time [days]")
+    plt.legend()
+    plt.show()
+
+    print("Finished Plot Raw Interp Fitted Data")
+
 def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
     print("Poly Data shape: ", data_block.shape)
     print("poly data: ", data_block)

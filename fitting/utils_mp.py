@@ -85,7 +85,7 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
         except Exception as ErrorRasterDataReading:
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
-    print("data_block from readout: ", data_block[:,2000,100])
+    print("data_block from readout: ", data_block[:,800,800])
     return data_block, qual_block, fitted_raster_band_name, shm
 
 
