@@ -2,15 +2,17 @@ from __future__ import print_function
 
 import time
 import socket
-from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data)
-from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
-                      get_master_raster_info)
 import torch
 import os
 import numpy
 import glob
 import fit_config
 
+from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data)
+from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
+                      get_master_raster_info)
+
+from MODISTSPlots3 import read_out_shp_koord, convert_koords_to_indizes
 
 if __name__ == "__main__":
     try:
@@ -56,7 +58,7 @@ if __name__ == "__main__":
             in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
             in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
             out_dir_fit = r"E:\MODIS_Data\v6\fitted"
-
+            shp_dir =     r"E:\MODIS_Data\shp\checkFitPlots"
 
         # kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
         tile = "h18v04"
@@ -80,6 +82,9 @@ if __name__ == "__main__":
         calc_from_to = [0, 927]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
+
+        # shapefile path
+        shp_info = read_out_shp_koord(os.path.join(shp_dir,"checkFitProducts1804.shp")) # dict with xykoords and desc string
 
         # multiprocessing constants
         num_of_pyhsical_cores = 4 - 1
@@ -110,6 +115,8 @@ if __name__ == "__main__":
                     if ts_epoch == ref_ras_epoch[0]:
                         #try:
                         # Initialize data fiting -load satellite data into data blocks
+                        # note quality nodata value from rasterfile = 255
+                        # but it gets changed to nan else where!
                         # ============================================================
 
 
@@ -135,7 +142,11 @@ if __name__ == "__main__":
                         job_list_with_data_inidzes = []             # for mp pool
                         cou = 0
                         start_interp_time = time.time()
-                        data_before_lin_interp = numpy.copy(data_block[:, plot_indizess[0], plot_indizess[1]])
+
+                        # outcomment if recalculate
+                        data_before_lin_interp = numpy.copy(data_block[:, :, :])
+                        # outcomment if recalculate
+
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
                             print(part)
@@ -156,13 +167,20 @@ if __name__ == "__main__":
 
                         print("- delta_lv.shape: ", delta_lv.shape)
 
-                        plot_raw_interp_fitted_data(data_before_lin_interp,
-                                      data_block[:, plot_indizess[0], plot_indizess[1]],
-                                      fit[:, plot_indizess[0], plot_indizess[1]],
-                                      qual_block[:, plot_indizess[0], plot_indizess[1]],
-                                      weights
-                                      )
+                        for shp_index in shp_info.keys():
+                                                        
+                            x_indizes, y_indizes = convert_koords_to_indizes(shp_info[shp_index]["koords"], master_raster_info)
+                            print("Calc x indizes: ", x_indizes)
+                            print("Calc y indizes: ", y_indizes)
+
+                            plot_raw_interp_fitted_data(data_before_lin_interp[:, x_indizes, y_indizes],
+                                        data_block[:, x_indizes, y_indizes],
+                                        fit[:, x_indizes, y_indizes],
+                                        qual_block[:, x_indizes, y_indizes],
+                                        weights,shp_info[shp_index]["desc"]
+                                        )
                         break
+
                         sigm = sigm * sig
                         qual_block_nu = sigm/delta_lv
 

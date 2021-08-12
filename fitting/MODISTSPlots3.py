@@ -37,6 +37,50 @@ from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
 from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
 
+def convert_koords_to_indizes(coords, master_raster_info):
+
+    shp_x = coords[0]
+    shp_y = coords[1]
+
+    # print("raster bands nr: ", ras.RasterCount)
+    #print("ras_geo_ref: ", ras_geo_ref)
+
+    ras_xorigin = master_raster_info[0][0]
+    ras_yorigin = master_raster_info[0][3]
+    ras_res = master_raster_info[0][1]
+    ras_cols = 2400
+    ras_rows = 2400
+
+    ras_x_ul = ras_xorigin
+    ras_y_ul = ras_yorigin
+
+    #calcuate the satellite image extend
+    ras_x_lr = ras_xorigin + ras_res * ras_cols
+    ras_y_lr = ras_yorigin + master_raster_info[0][5] * ras_rows          # negative ras_resolution (0.0, 463.31271652750013, 0.0, 5559752.597460333, 0.0, -463.31271652750013)
+
+    #print("Sat Extend UL: ",(ras_x_ul, ras_y_ul))
+    #print("Sat Extend LR: ", (ras_x_lr, ras_y_lr))
+
+    if shp_x >= ras_x_ul or shp_x <= ras_x_lr:
+        if shp_y <= ras_y_ul and shp_y >= ras_y_lr:
+            #print("Shp Coords in SatExtend")
+
+            # calculate the pixel position in  the image matrix that was marked with the shape geometry
+            ras_x_ind_BildMatrix = int(abs((abs(ras_xorigin) - abs(shp_x)) / ras_res))
+            ras_y_ind_BildMatrix = int(abs((abs(ras_yorigin) - abs(shp_y)) / ras_res))
+
+
+
+        else:
+            print("Shp y Coordinate not ins SatSzene Extent")
+            
+    else:
+        print("Shp x Coordinate not ins SatSzene Extent")
+        
+
+    return ras_x_ind_BildMatrix, ras_y_ind_BildMatrix
+
+
 def read_out_modis_values(epochs_path_list, shp_koords_list, root_dir=False):
     """
     Extracts the rastervalue of the MODIS image according to its position. the x and y shape koordinates are taken an

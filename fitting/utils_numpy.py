@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from osgeo import gdal, gdalconst
 from scipy.interpolate import interp1d, griddata
 from scipy.signal import argrelextrema
+from MODISTSPlots3 import read_out_shp_koord
 
 
 
@@ -64,8 +65,15 @@ def perfom_fft(data_block):
     plt.legend()
     plt.show()
 
-def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, qual_weights_array):
+def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, qual_weights_array, desc_of_shp):
+
+
     print("Accessing Raw - Interp - Fitted Data Plot")
+    print("raw: ", raw_array)
+    print("lin: ", interp_array)
+    print("fit: ", fitted_array)
+    print("qual: ", qual_data_array)
+
     qual_factor = 100
     n = raw_array.shape[0]
     t = numpy.arange(0, n, 1)
@@ -75,6 +83,8 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     okay_qual = numpy.where(qual_data_array == qual_weights_array[1], qual_weights_array[1], numpy.nan) * qual_factor
     bad_qual  = numpy.where(qual_data_array == qual_weights_array[2],qual_weights_array[2], numpy.nan) * qual_factor
     really_bad_qual = numpy.where(qual_data_array == qual_weights_array[3], qual_weights_array[3], numpy.nan) * qual_factor
+    nan_qual = numpy.where(numpy.nan_to_num(qual_data_array) == 0, 0.01, numpy.nan) * qual_factor
+    #nan_qual  = numpy.where(numpy.nan_to_num(qual_data_array) == numpy.nan, 0.01, numpy.nan) * qual_factor
 
     fig, axs = plt.subplots(1, 1)
 
@@ -87,10 +97,12 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     plt.plot(t, okay_qual, 'yo', label="Okay Quality")
     plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
     plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
+    plt.plot(t, nan_qual, 'ko', label="NaN Value")
 
     plt.xlim(t[0], t[-1])
     plt.ylabel("Intensity [%]")
-    plt.xlabel("Time [days]")
+    plt.xlabel("Time [Day of Year]")
+    plt.title("Shape Desc: %s"%desc_of_shp)
     plt.legend()
     plt.show()
 

@@ -35,10 +35,11 @@ if __name__ == "__main__":
         band = i.GetRasterBand(1)
         tmp = band.ReadAsArray()
         print("shape: ", tmp.shape)
+        print("Get No Data value: ", band.GetNoDataValue())
         data_stack[:,:,cou] = band.ReadAsArray()        
         del band
         cou += 1
-    test_array = numpy.where(((data_stack[:,:,0]==32767) & (data_stack[:,:,1]==1)), 1, 0)
+    test_array = numpy.where(((data_stack[:,:,0]==32767) & (data_stack[:,:,1]!=255)), 1, 0)
     #test_array = numpy.where((data_stack[:,:,0]==32767) , 1, 0)
 
     outras = driver.Create(os.path.join(out_dir, data_name[:-4]+".qul_check.tif"), block_size_x, block_size_y, 1,
