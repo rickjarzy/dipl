@@ -8,7 +8,7 @@ import numpy
 import glob
 import fit_config
 
-from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data)
+from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data, add_shp_koords_to_shp_info)
 from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
                       get_master_raster_info)
 
@@ -143,9 +143,12 @@ if __name__ == "__main__":
                         cou = 0
                         start_interp_time = time.time()
 
-                        # outcomment if recalculate
-                        data_before_lin_interp = numpy.copy(data_block[:, :, :])
-                        # outcomment if recalculate
+
+
+                        # convert shp koords to matrix indizes and append raw data to these coordinates
+                        # so one can plot the real raw data against the lin interpolation etc
+                        shp_info = add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block)
+
 
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
@@ -169,11 +172,11 @@ if __name__ == "__main__":
 
                         for shp_index in shp_info.keys():
                                                         
-                            x_indizes, y_indizes = convert_koords_to_indizes(shp_info[shp_index]["koords"], master_raster_info)
+                            x_indizes, y_indizes = shp_info[shp_index]["mat_index"][0], shp_info[shp_index]["mat_index"][1]
                             print("Calc x indizes: ", x_indizes)
                             print("Calc y indizes: ", y_indizes)
 
-                            plot_raw_interp_fitted_data(data_before_lin_interp[:, x_indizes, y_indizes],
+                            plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
                                         data_block[:, x_indizes, y_indizes],
                                         fit[:, x_indizes, y_indizes],
                                         qual_block[:, x_indizes, y_indizes],

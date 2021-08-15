@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from osgeo import gdal, gdalconst
 from scipy.interpolate import interp1d, griddata
 from scipy.signal import argrelextrema
-from MODISTSPlots3 import read_out_shp_koord
+from MODISTSPlots3 import read_out_shp_koord, convert_koords_to_indizes
 
 
 
@@ -64,6 +64,15 @@ def perfom_fft(data_block):
 
     plt.legend()
     plt.show()
+
+def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
+
+    for shp_index in  shp_info.keys():
+        x_indizes, y_indizes = convert_koords_to_indizes(shp_info[shp_index]["koords"], master_raster_info)
+        shp_info[shp_index].update({"mat_index":[x_indizes, y_indizes]})
+        shp_info[shp_index].update({"raw_data": data_block[:, x_indizes, y_indizes]})
+
+    return shp_info
 
 def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, qual_weights_array, desc_of_shp):
 
