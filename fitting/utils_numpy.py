@@ -2,6 +2,7 @@ import os
 import numpy
 import time
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 from osgeo import gdal, gdalconst
 from scipy.interpolate import interp1d, griddata
 from scipy.signal import argrelextrema
@@ -74,7 +75,25 @@ def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
 
     return shp_info
 
-def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, qual_weights_array, desc_of_shp):
+def get_fileslist_from_loop_index(files_list_full, loop_index, sg_window):
+
+    return files_list_full[loop_index:loop_index+sg_window]
+
+def get_dates_from_doy(file_name_list, shp_date_info):
+
+    dates = []
+    for filename in file_name_list:
+        doy_info = filename.split(".")[1]
+        doy = int(doy_info[-3:])
+        year = int(doy_info[1:5])
+        date = datetime(year,1,1) + timedelta(doy)
+        dates.append("%d-%d-%d"%(date.year, date.month, date.day))
+    shp_date_info["plot_dates"]={"dates":dates}
+    print(date)
+    return shp_date_info
+
+def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, 
+                                qual_weights_array, desc_of_shp, band, shp_date_info):
 
 
     print("Accessing Raw - Interp - Fitted Data Plot")
@@ -82,6 +101,7 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     print("lin: ", interp_array)
     print("fit: ", fitted_array)
     print("qual: ", qual_data_array)
+    print("date: ", shp_date_info)
 
     qual_factor = 100
     n = raw_array.shape[0]
@@ -98,7 +118,7 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     fig, axs = plt.subplots(1, 1)
 
 #    plt.sca(axs[0])
-    plt.plot(t, raw_array, color='c', LineWidth=3, label="raw data")
+    plt.plot(t, raw_array, color='c', marker="x", LineWidth=0, label="raw data")
     plt.plot(t, interp_array, color='k', LineWidth=1, linestyle='--', label='lin interp')
     plt.plot(t, fitted_array,  color='b', LineWidth=2, label='Poly Filtered data')
 
@@ -111,11 +131,17 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     plt.xlim(t[0], t[-1])
     plt.ylabel("Intensity [%]")
     plt.xlabel("Time [Day of Year]")
-    plt.title("Shape Desc: %s"%desc_of_shp)
+    plt.xticks(rotation=45)
+    axs.set_xticklabels(shp_date_info["plot_dates"]["dates"])
+    plt.title("Reflectence Information for Band %s: %s"%(band, desc_of_shp))
     plt.legend()
     plt.show()
 
     print("Finished Plot Raw Interp Fitted Data")
+
+def get_fileslist_from_loop_index(files_list_full, loop_index, sg_window):
+
+    return files_list_full[loop_index:loop_index+sg_window]
 
 def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
     print("Poly Data shape: ", data_block.shape)

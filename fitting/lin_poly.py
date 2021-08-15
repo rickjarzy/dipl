@@ -8,7 +8,8 @@ import numpy
 import glob
 import fit_config
 
-from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data, add_shp_koords_to_shp_info)
+from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data, 
+                        add_shp_koords_to_shp_info, get_dates_from_doy, get_fileslist_from_loop_index)
 from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
                       get_master_raster_info)
 
@@ -120,20 +121,19 @@ if __name__ == "__main__":
                         # ============================================================
 
 
-                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
+                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, 
+                                                                                                    list_qual, list_data, num_of_buf_bytes, 
+                                                                                                    master_raster_info, fit_nr, name_weights_addition)
 
                         qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
-
+                        print(list_data[ts_epoch:ts_epoch+sg_window])
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
 
-                        plot_indizess = [800,800]
                         start_interpl = time.time()
                         print("time start interpolation: ")
                         print("finished interpl: ", time.time() - start_interpl , " [sec]")
                         print("datablock type: ", type(data_block))
-
-                        print(data_block[:,plot_indizess[0], plot_indizess[1]])
 
                         # interpolate linear on nan values
                         # - keep in mind - shit data will always stay shit data
@@ -143,13 +143,11 @@ if __name__ == "__main__":
                         cou = 0
                         start_interp_time = time.time()
 
-
-
                         # convert shp koords to matrix indizes and append raw data to these coordinates
                         # so one can plot the real raw data against the lin interpolation etc
                         shp_info = add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block)
-
-
+                        # add key "plot_dates" to shp_info dict
+                        shp_info = get_dates_from_doy(get_fileslist_from_loop_index(list_data, ts_epoch, sg_window), shp_info)
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
                             print(part)
@@ -158,31 +156,31 @@ if __name__ == "__main__":
                             job_list_with_data_inidzes.append(info_dict)
                             cou += 1
 
-
                         multi_linear_interpolation(job_list_with_data_inidzes)
                         print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
 
                         # END linear interpolation
                         [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
 
-                        print("- fit.shape: ", fit.shape)
-                        print("- fit data: \n", fit[:,plot_indizess[0], plot_indizess[1]])
-
-                        print("- delta_lv.shape: ", delta_lv.shape)
-
+                        # Plots for thesis
                         for shp_index in shp_info.keys():
                                                         
                             x_indizes, y_indizes = shp_info[shp_index]["mat_index"][0], shp_info[shp_index]["mat_index"][1]
                             print("Calc x indizes: ", x_indizes)
                             print("Calc y indizes: ", y_indizes)
 
+
+
                             plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
                                         data_block[:, x_indizes, y_indizes],
                                         fit[:, x_indizes, y_indizes],
                                         qual_block[:, x_indizes, y_indizes],
-                                        weights,shp_info[shp_index]["desc"]
+                                        weights,shp_info[shp_index]["desc"],
+                                        "Band %d"%b,
+                                        shp_info
                                         )
                         break
+                        # end plots for thesis
 
                         sigm = sigm * sig
                         qual_block_nu = sigm/delta_lv
