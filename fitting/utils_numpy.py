@@ -71,7 +71,7 @@ def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
     for shp_index in  shp_info.keys():
         x_indizes, y_indizes = convert_koords_to_indizes(shp_info[shp_index]["koords"], master_raster_info)
         shp_info[shp_index].update({"mat_index":[x_indizes, y_indizes]})
-        shp_info[shp_index].update({"raw_data": data_block[:, x_indizes, y_indizes]})
+        shp_info[shp_index].update({"raw_data": numpy.copy(data_block[:, x_indizes, y_indizes]).astype(numpy.float)})
 
     return shp_info
 
@@ -116,6 +116,8 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     #nan_qual  = numpy.where(numpy.nan_to_num(qual_data_array) == numpy.nan, 0.01, numpy.nan) * qual_factor
 
     fig, axs = plt.subplots(1, 1)
+
+    raw_array[raw_array==32767]=numpy.nan
 
 #    plt.sca(axs[0])
     plt.plot(t, raw_array, color='c', marker="x", LineWidth=0, label="raw data")

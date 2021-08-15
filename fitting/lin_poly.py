@@ -146,8 +146,10 @@ if __name__ == "__main__":
                         # convert shp koords to matrix indizes and append raw data to these coordinates
                         # so one can plot the real raw data against the lin interpolation etc
                         shp_info = add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block)
+                        
                         # add key "plot_dates" to shp_info dict
                         shp_info = get_dates_from_doy(get_fileslist_from_loop_index(list_data, ts_epoch, sg_window), shp_info)
+                        
                         # create sections that should run in parallel
                         for part in range(0, master_raster_info[2], number_of_rows_data_part):
                             print(part)
