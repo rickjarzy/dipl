@@ -21,8 +21,7 @@ def download_dates():
             print("date: {}.{}.{}".format(calc_date.year, calc_date.month, calc_date.day)," - doy: ", doy)
 
 
-def get_fileslist_from_loop_index(files_list_full, loop_index, sg_window:
-
+def get_fileslist_from_loop_index(files_list_full, loop_index, sg_window):
     return files_list_full[loop_index:loop_index+sg_window]
 
 def get_dates_from_doy(file_name_list, shp_date_info):
