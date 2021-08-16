@@ -171,8 +171,6 @@ if __name__ == "__main__":
                             print("Calc x indizes: ", x_indizes)
                             print("Calc y indizes: ", y_indizes)
 
-
-
                             plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
                                         data_block[:, x_indizes, y_indizes],
                                         fit[:, x_indizes, y_indizes],
@@ -181,7 +179,8 @@ if __name__ == "__main__":
                                         "Band %d"%b,
                                         shp_info
                                         )
-                        break
+                        
+                
                         # end plots for thesis
 
                         sigm = sigm * sig

@@ -210,7 +210,7 @@ def plot_ts_with_shape(input_dict, input_band, input_year):
 
         plotted_year = input_dict[shape_id]["year"]
 
-        print("Create Plot for %d and  shape nr %d: "%(plotted_year, shape_id))
+        print("Create Plot for %d and  shape_desc %s: "%(plotted_year, input_dict[shape_id]["desc"]))
         print("ID Desc : ", input_dict[shape_id].keys())
 
         location_desc = input_dict[shape_id]["desc"]
@@ -235,9 +235,9 @@ def plot_ts_with_shape(input_dict, input_band, input_year):
             print("processing fit product: ", fit_product)
 
             data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data_%d"%shape_id]
-
+            print("data: ", data_array)
             ax.plot(x_axe_data,data_array, label=fit_product)
-
+        print("raw_data: ", input_dict[shape_id]["raw_data_%d"%shape_id])
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
         ax.plot(x_axe_data, good_qual, 'go', label="Best Quality Full Inversion")
         ax.plot(x_axe_data, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
@@ -290,7 +290,7 @@ def main():
         in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
-        shp_dir     = r"C:\Users\paulo\Documents\Entwicklung\Python\UNI\Diplomarbeit\shp\checkFitPlots"
+        shp_dir     = r"E:\MODIS_Data\shp\checkFitPlots"
     else:
         in_dir_qs =   r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf =   r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
