@@ -36,7 +36,7 @@ import copy
 from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
 from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
-
+from create_date_for_plots import get_dates_from_doy
 def convert_koords_to_indizes(coords, master_raster_info):
 
     shp_x = coords[0]
@@ -68,8 +68,6 @@ def convert_koords_to_indizes(coords, master_raster_info):
             # calculate the pixel position in  the image matrix that was marked with the shape geometry
             ras_x_ind_BildMatrix = int(abs((abs(ras_xorigin) - abs(shp_x)) / ras_res))
             ras_y_ind_BildMatrix = int(abs((abs(ras_yorigin) - abs(shp_y)) / ras_res))
-
-
 
         else:
             print("Shp y Coordinate not ins SatSzene Extent")
@@ -200,7 +198,7 @@ def read_out_shp_koord(shp_path):
     return return_dict
 
 
-def plot_ts_with_shape(input_dict, input_band, input_year):
+def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_year):
 
     x_axe_data = numpy.array(range(0,46,1))
 
@@ -249,7 +247,8 @@ def plot_ts_with_shape(input_dict, input_band, input_year):
         ax.set_xlabel("Day Of Year From Year %s" % plotted_year)
         ax.set_ylabel("Reflexion [%]")
         ax.set_xticks(list(range(0,46,1)))
-        ax.set_xticklabels([str(i) for i in range(1,365,8)])
+        #ax.set_xticklabels([str(i) for i in range(1,365,8)])
+        ax.set_xticklabels(input_shp_date_info_dict["plot_dates"]["dates"], rotation=45)
 
         if input_band == "band_1":
             y_limits = [0, 5000]
@@ -355,7 +354,10 @@ def main():
     #used_fit_info_dict = fit_info_fft
     #used_fit_info_dict = fit_info_poly
     used_fit_info_dict = fit_info_best
-
+    print("SHP_INFO: ", shp_info)
+    shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
+    print("after: ", shp_info)
+    
     # write the epochs file names onto the dict
     for fit_product in used_fit_info_dict.keys():
         print("Fit Product: ", fit_product)
@@ -438,7 +440,7 @@ def main():
             print("data: ", shp_info[ind]["fit_products"][indi]["fit_data_%d"%ind])
 
     # create a plot for the raster data TS
-    plot_ts_with_shape(shp_info, user_band, user_year)
+    plot_ts_with_shape(shp_info, shp_date_info, user_band, user_year)
 
 
 

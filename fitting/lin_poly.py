@@ -171,16 +171,17 @@ if __name__ == "__main__":
                             print("Calc x indizes: ", x_indizes)
                             print("Calc y indizes: ", y_indizes)
 
+                            # ATTENTION - x and y indizes have to be switched due to the fact, the way the multidim data gets stored
                             plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
-                                        data_block[:, x_indizes, y_indizes],
-                                        fit[:, x_indizes, y_indizes],
-                                        qual_block[:, x_indizes, y_indizes],
+                                        data_block[:, y_indizes, x_indizes],
+                                        fit[:, y_indizes, x_indizes],
+                                        qual_block[:, y_indizes, x_indizes],
                                         weights,shp_info[shp_index]["desc"],
                                         "Band %d"%b,
                                         shp_info
                                         )
                         
-                
+                        break
                         # end plots for thesis
 
                         sigm = sigm * sig

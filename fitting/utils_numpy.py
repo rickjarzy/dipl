@@ -68,10 +68,13 @@ def perfom_fft(data_block):
 
 def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
 
+    """these are coordinates for planar matrizes like an 2d image array. the multidim array from the multiprocessing
+    operations have to be written as [:, y_inidzes, x_indizes] cause they axes are twisted when getting stored that way"""
+
     for shp_index in  shp_info.keys():
         x_indizes, y_indizes = convert_koords_to_indizes(shp_info[shp_index]["koords"], master_raster_info)
         shp_info[shp_index].update({"mat_index":[x_indizes, y_indizes]})
-        shp_info[shp_index].update({"raw_data": numpy.copy(data_block[:, x_indizes, y_indizes]).astype(numpy.float)})
+        shp_info[shp_index].update({"raw_data": numpy.copy(data_block[:, y_indizes, x_indizes]).astype(numpy.float)})
 
     return shp_info
 

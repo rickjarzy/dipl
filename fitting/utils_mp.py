@@ -49,7 +49,7 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
     qual_block = numpy.zeros([sg_window, master_raster_info[2], master_raster_info[3]])
     shm = shared_memory.SharedMemory(create=True, size=num_ob_buf_bytes)
     data_block = numpy.ndarray((sg_window, master_raster_info[2], master_raster_info[3]), dtype=numpy.int16, buffer=shm.buf)
-
+    print("Data block PRE: ", data_block[:,0:0])
     #data_block.share_memory_()
     #qual_block.share_memory_()
     print("\n# START READING SATDATA for BAND {}".format(band))
@@ -85,7 +85,7 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
         except Exception as ErrorRasterDataReading:
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
 
-    print("data_block from readout: ", data_block[:,800,800])
+    print("data_block from readout: ", data_block[:,1206,1847])
     return data_block, qual_block, fitted_raster_band_name, shm
 
 

@@ -38,6 +38,8 @@ fit_info_all["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculat
 # fitted products start with 2000113 for band_1 and band_2
 fit_info_all["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"
                                                                 "on the pixels that had NaN values or less then a specific inversion number", "files_list":[]}
+
+
 fit_info_all["dft.elements_3.1.00_0.50_0.25_0.01"] = {"algo_desc":"calculates a discrete fourier transformation over the entire year ", "weights":"yes", "files_list":[]}
 # FFT FITs Only in this dict
 # ----------------------------------------------------------------------------------------------------------------------
@@ -60,8 +62,8 @@ fit_info_poly["lin_poly_win15.weights.1_0.5_0.01_0.01_q0.01"] = {"algo_desc": "c
 fit_info_poly["poly_15.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
 fit_info_poly["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"
                                                                 "on the pixels that had NaN values or less then a specific inversion number", "files_list":[]}
-fit_info_all["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
-
+fit_info_poly["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
+fit_info_poly["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[]}
 
 # BEST FITS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -70,6 +72,7 @@ fit_info_best["dft.elements_3.1.00_0.50_0.25_0.01"] = {"algo_desc": "calculate d
 fit_info_best["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc": "calculate discrete fourier transform with three elements for entire year"}
 fit_info_best["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
 fit_info_best["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"}
+fit_info_best["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[]}
 #fit_info_best["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation really low level"}
 # create the factor for the list index calculation in the main programm of the MODISPlots3.py
 # Start 2001 has factor 0

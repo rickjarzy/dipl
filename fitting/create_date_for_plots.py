@@ -32,7 +32,7 @@ def get_dates_from_doy(file_name_list, shp_date_info):
         doy = int(doy_info[-3:])
         year = int(doy_info[1:5])
         date = datetime(year,1,1) + timedelta(doy)
-        dates.append(date)
+        dates.append("%d-%d-%d"%(date.year, date.month, date.day))
     shp_date_info["plot_dates"]={"dates":dates}
     print(date)
     return shp_date_info
