@@ -10,6 +10,7 @@ from MODISTSPlots3 import read_out_shp_koord, convert_koords_to_indizes
 
 
 
+
 def perfom_fft(data_block):
 
     print("FFT Data shape: ", data_block.shape)
@@ -77,23 +78,6 @@ def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
         shp_info[shp_index].update({"raw_data": numpy.copy(data_block[:, y_indizes, x_indizes]).astype(numpy.float)})
 
     return shp_info
-
-def get_fileslist_from_loop_index(files_list_full, loop_index, sg_window):
-
-    return files_list_full[loop_index:loop_index+sg_window]
-
-def get_dates_from_doy(file_name_list, shp_date_info):
-
-    dates = []
-    for filename in file_name_list:
-        doy_info = filename.split(".")[1]
-        doy = int(doy_info[-3:])
-        year = int(doy_info[1:5])
-        date = datetime(year,1,1) + timedelta(doy)
-        dates.append("%d-%d-%d"%(date.year, date.month, date.day))
-    shp_date_info["plot_dates"]={"dates":dates}
-    print(date)
-    return shp_date_info
 
 def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, 
                                 qual_weights_array, desc_of_shp, band, shp_date_info):

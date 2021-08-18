@@ -37,6 +37,8 @@ from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
 from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
 from create_date_for_plots import get_dates_from_doy
+
+
 def convert_koords_to_indizes(coords, master_raster_info):
 
     shp_x = coords[0]

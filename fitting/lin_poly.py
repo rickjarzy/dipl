@@ -9,11 +9,12 @@ import glob
 import fit_config
 
 from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data, 
-                        add_shp_koords_to_shp_info, get_dates_from_doy, get_fileslist_from_loop_index)
+                        add_shp_koords_to_shp_info)
 from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
                       get_master_raster_info)
 
 from MODISTSPlots3 import read_out_shp_koord, convert_koords_to_indizes
+from create_date_for_plots import get_dates_from_doy, get_fileslist_from_loop_index
 
 if __name__ == "__main__":
     try:
