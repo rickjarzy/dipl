@@ -81,7 +81,8 @@ if __name__ == "__main__":
         weights = [1, 0.5, 0.25, 0.01, 0.01]
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
-        calc_from_to = [0, 927]
+        # calc_from_to = [0, 927] 
+        calc_from_to = [39, 85]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -96,10 +97,10 @@ if __name__ == "__main__":
 
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
-            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:]
+            list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))#[calc_from_to[0]:]
 
             os.chdir(os.path.join(in_dir_tf, tile))
-            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))[calc_from_to[0]:]
+            list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))#[calc_from_to[0]:]
             len_list_data = len(list_data)
             # check if qual and sat data have the same amount of files
             if int(len(list_qual)) != int(len(list_data)):
@@ -127,7 +128,7 @@ if __name__ == "__main__":
                                                                                                     master_raster_info, fit_nr, name_weights_addition)
 
                         qual_block = additional_stat_info_raster_mp(qual_block, weights)
-
+                        print("ts_epoch: ", ts_epoch)
                         print(list_data[ts_epoch:ts_epoch+sg_window])
                         print("\nStart fitting %s - Nr %d out of %d \n-------------------------------------------" % (fitted_raster_band_name, ts_epoch+1, len_list_data))
 

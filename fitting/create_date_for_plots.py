@@ -3,7 +3,7 @@ import numpy
 from datetime import datetime, timedelta
 
 """ 
-Contains all the logic that creates the date information for the x axe labes on the plots
+Contains all the logic that creates the date information for the x axe labes on the plots, or just some helper functions to select the right indizess to plot
 """
 
 def download_dates():
