@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
         # calc_from_to = [0, 927] 
-        calc_from_to = [39, 85]
+        calc_from_to = [499, 545]
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
                         # ============================================================
 
 
-                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, 
+                        data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, ts_epoch, b, in_dir_qs, in_dir_tf, tile, 
                                                                                                     list_qual, list_data, num_of_buf_bytes, 
                                                                                                     master_raster_info, fit_nr, name_weights_addition)
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                                         fit[:, y_indizes, x_indizes],
                                         qual_block[:, y_indizes, x_indizes],
                                         weights,shp_info[shp_index]["desc"],
-                                        "Band %d"%b,
+                                        "band %d"%b,
                                         shp_info
                                         )
                         

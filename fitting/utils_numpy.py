@@ -108,21 +108,22 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
 
 #    plt.sca(axs[0])
     plt.plot(t, raw_array, color='c', marker="x", LineWidth=0, label="raw data")
-    plt.plot(t, interp_array, color='k', LineWidth=1, linestyle='--', label='lin interp')
-    plt.plot(t, fitted_array,  color='b', LineWidth=2, label='Poly Filtered data')
+    plt.plot(t, interp_array, color='k', LineWidth=1, linestyle='--', label='linear interpolated data')
+    plt.plot(t, fitted_array,  color='b', LineWidth=2, label='SG filtered data')
 
-    plt.plot(t, good_qual, 'go', label="Good Quality")
-    plt.plot(t, okay_qual, 'yo', label="Okay Quality")
-    plt.plot(t, bad_qual, 'o', color='orange', label="Bad Quality")
-    plt.plot(t, really_bad_qual, 'ro', label="Really Bad Quality")
-    plt.plot(t, nan_qual, 'ko', label="NaN Value")
+    plt.plot(t, good_qual, 'go', label="good quality")
+    plt.plot(t, okay_qual, 'yo', label="okay quality")
+    plt.plot(t, bad_qual, 'o', color='orange', label="bad quality")
+    plt.plot(t, really_bad_qual, 'ro', label="really bad quality")
+    plt.plot(t, nan_qual, 'ko', label="NaN value")
 
     plt.xlim(t[0], t[-1])
     plt.ylabel("Intensity [%]")
-    plt.xlabel("Time [Day of Year]")
+    plt.xlabel("Date")
     plt.xticks(rotation=45)
+    axs.set_xticks(t)
     axs.set_xticklabels(shp_date_info["plot_dates"]["dates"])
-    plt.title("Reflectence Information for Band %s: %s"%(band, desc_of_shp))
+    plt.title("Comparison reflectance values for %s: %s"%(band, desc_of_shp))
     plt.legend()
     plt.show()
 
@@ -187,9 +188,9 @@ def plot_raw_data(data_block,qual_block,qual_weights, fit_data=[]):
 
         plt.sca(axs[0])
         plt.plot(t, data_block, color='c', LineWidth=3, label="raw data")
-        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='lin interp')
+        plt.plot(t, data_block_with_lin_interpol_where_nan, color='k', LineWidth=1, linestyle='--', label='linear interpolated data')
         plt.plot(t, data_block_with_cubic_interp_where_nan(t), color='r', LineWidth=1, linestyle=':', label='cubic interp')
-        plt.plot(t, fit_data,  color='b', LineWidth=2, label='Poly Filtered data')
+        plt.plot(t, fit_data,  color='b', LineWidth=2, label='SG filtered data')
         plt.plot(t, ffilt, color="k", LineWidth=2, label='FFT Filtered')
 
         plt.plot(t, good_qual, 'go', label="Good Quality")

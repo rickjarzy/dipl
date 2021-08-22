@@ -22,7 +22,7 @@ def get_master_raster_info(in_dir, tile, sat_product):
     return [geo_trafo, projection, block_size_x, block_size_y, driver]
 
 
-def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
+def init_data_block_mp(sg_window, ts_epoch, band, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_ob_buf_bytes, master_raster_info, fit_nr, name_weights_addition):
 
     """
     Creates a initial datablock for the modis data and returns a numpy ndim array
@@ -53,11 +53,15 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
     #data_block.share_memory_()
     #qual_block.share_memory_()
     print("\n# START READING SATDATA for BAND {}".format(band))
+
+    index_for_data_list = ts_epoch
+
+
     for i in range(0, sg_window, 1):
 
         # load qual file
         try:
-            qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[i]), gdal.GA_ReadOnly)
+            qual_ras = gdal.Open(os.path.join(in_dir_qs, tile, list_qual[index_for_data_list]), gdal.GA_ReadOnly)
 
             #print("load qual data for band %d: %s" % (band, list_qual[i]))
             #qual_band = qual_ras.GetRasterBand(1)
@@ -68,23 +72,23 @@ def init_data_block_mp(sg_window, band, in_dir_qs, in_dir_tf, tile, list_qual, l
             print("### ERROR while reading quality raster:\n {}".format(ErrorQualRasReading))
         # load satellite data
         try:
-            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[i]), gdal.GA_ReadOnly)
+            data_ras = gdal.Open(os.path.join(in_dir_tf, tile, list_data[index_for_data_list]), gdal.GA_ReadOnly)
 
-            print("# load sat data for band %s: %s" % (str(band), list_data[i]))
+            print("# load sat data for band %s: %s" % (str(band), list_data[index_for_data_list]))
             #data_band = data_ras.GetRasterBand(1)
             data_block[i, :, :] = data_ras.ReadAsArray()
 
             # collect epochs raster name
             if fit_nr == i:
-                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[i])))
+                print("\n# Name of fitted tile will be:  {} \n".format(os.path.join(tile, list_data[index_for_data_list])))
 
-                fitted_raster_band_name = list_data[i][:-4] + name_weights_addition % str(sg_window)
+                fitted_raster_band_name = list_data[index_for_data_list][:-4] + name_weights_addition % str(sg_window)
 
             del data_ras
-
+        
         except Exception as ErrorRasterDataReading:
             print("### ERROR while reading satellite raster:\n {}".format(ErrorRasterDataReading))
-
+        index_for_data_list += 1
     print("data_block from readout: ", data_block[:,1206,1847])
     return data_block, qual_block, fitted_raster_band_name, shm
 
