@@ -1,6 +1,7 @@
 import os
 import numpy
 import time
+import matplotlib
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from osgeo import gdal, gdalconst
@@ -83,6 +84,12 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
                                 qual_weights_array, desc_of_shp, band, shp_date_info):
 
 
+    # font = {'family' : 'normal',
+    #     'weight' : 'bold',
+    #     'size'   : 15}
+
+    # matplotlib.rc('font', **font)
+
     print("Accessing Raw - Interp - Fitted Data Plot")
     print("raw: ", raw_array)
     print("lin: ", interp_array)
@@ -111,10 +118,14 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     plt.plot(t, interp_array, color='k', LineWidth=1, linestyle='--', label='linear interpolated data')
     plt.plot(t, fitted_array,  color='b', LineWidth=2, label='SG filtered data')
 
-    plt.plot(t, good_qual, 'go', label="good quality")
-    plt.plot(t, okay_qual, 'yo', label="okay quality")
-    plt.plot(t, bad_qual, 'o', color='orange', label="bad quality")
-    plt.plot(t, really_bad_qual, 'ro', label="really bad quality")
+    # plt.plot(t, good_qual, 'go', label="good quality")
+    # plt.plot(t, okay_qual, 'yo', label="okay quality")
+    # plt.plot(t, bad_qual, 'o', color='orange', label="bad quality")
+    # plt.plot(t, really_bad_qual, 'ro', label="really bad quality")
+    plt.plot(t, good_qual, 'go', label="Best Quality Full Inversion")
+    plt.plot(t, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
+    plt.plot(t, bad_qual, 'o', color='orange', label="Magnitude Inversion ( number of obs >= 7)")
+    plt.plot(t, really_bad_qual, 'ro', label="Magnitude Inversion (number of obs 2>= X < 7)")
     plt.plot(t, nan_qual, 'ko', label="NaN value")
 
     plt.xlim(t[0], t[-1])
