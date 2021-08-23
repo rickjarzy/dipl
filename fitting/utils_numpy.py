@@ -96,7 +96,7 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     print("fit: ", fitted_array)
     print("qual: ", qual_data_array)
     print("date: ", shp_date_info)
-    figure_file_name_desc = desc_of_shp.replace("-", "").replace(" ", "_")
+    figure_file_name_desc = desc_of_shp.replace("-", "_")
     figure_file_name_weights = r"_%1.0f_%3.2f_%3.2f_%3.2f"%(qual_weights_array[0],qual_weights_array[1],qual_weights_array[2],qual_weights_array[3])
     
     figure_file_name = figure_filename_post_fix + band.replace(" ", "_") + "_" + figure_file_name_desc + figure_file_name_weights.replace(".", "") +".png"
