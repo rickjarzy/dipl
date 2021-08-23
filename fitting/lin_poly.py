@@ -61,6 +61,8 @@ if __name__ == "__main__":
             in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
             out_dir_fit = r"E:\MODIS_Data\v6\fitted"
             shp_dir =     r"E:\MODIS_Data\shp\checkFitPlots"
+            figure_path = r"E:\Diplomarbeit\Schriftlich\Diplomarbeit\LatexFiles\Versuch2\Versuch1\Grafiken\Fitting\Fitting_method_comparison"
+            figure_filename_post_fix = r"comparison_reflectance_values_for_"
 
         # kacheln = ["h18v04", "h18v03", "h19v03", "h19v04"]
         tile = "h18v04"
@@ -79,6 +81,7 @@ if __name__ == "__main__":
         A[:, 2] = A[:, 2] ** 2
 
         weights = [1, 0.5, 0.25, 0.01, 0.01]
+        #weights = [1, 0.01, 0.01, 0.01, 0.01]
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
         # calc_from_to = [0, 927] 
@@ -178,9 +181,12 @@ if __name__ == "__main__":
                                         data_block[:, y_indizes, x_indizes],
                                         fit[:, y_indizes, x_indizes],
                                         qual_block[:, y_indizes, x_indizes],
-                                        weights,shp_info[shp_index]["desc"],
+                                        weights,
+                                        shp_info[shp_index]["desc"],
                                         "band %d"%b,
-                                        shp_info
+                                        shp_info,
+                                        figure_path, 
+                                        figure_filename_post_fix,
                                         )
                         
                         break

@@ -81,7 +81,7 @@ def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
     return shp_info
 
 def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, 
-                                qual_weights_array, desc_of_shp, band, shp_date_info):
+                                qual_weights_array, desc_of_shp, band, shp_date_info, figure_path, figure_filename_post_fix):
 
 
     # font = {'family' : 'normal',
@@ -96,6 +96,11 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     print("fit: ", fitted_array)
     print("qual: ", qual_data_array)
     print("date: ", shp_date_info)
+    figure_file_name_desc = desc_of_shp.replace("-", "").replace(" ", "_")
+    figure_file_name_weights = r"_%1.0f_%3.2f_%3.2f_%3.2f"%(qual_weights_array[0],qual_weights_array[1],qual_weights_array[2],qual_weights_array[3])
+    
+    figure_file_name = figure_filename_post_fix + band.replace(" ", "_") + "_" + figure_file_name_desc + figure_file_name_weights.replace(".", "") +".png"
+    figure_file_path = os.path.join(figure_path, figure_file_name)
 
     qual_factor = 100
     n = raw_array.shape[0]
@@ -108,9 +113,8 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     really_bad_qual = numpy.where(qual_data_array == qual_weights_array[3], qual_weights_array[3], numpy.nan) * qual_factor
     nan_qual = numpy.where(numpy.nan_to_num(qual_data_array) == 0, 0.01, numpy.nan) * qual_factor
     #nan_qual  = numpy.where(numpy.nan_to_num(qual_data_array) == numpy.nan, 0.01, numpy.nan) * qual_factor
-
+    plt.rcParams["figure.figsize"] = (12, 9)
     fig, axs = plt.subplots(1, 1)
-
     raw_array[raw_array==32767]=numpy.nan
 
 #    plt.sca(axs[0])
@@ -122,21 +126,23 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     # plt.plot(t, okay_qual, 'yo', label="okay quality")
     # plt.plot(t, bad_qual, 'o', color='orange', label="bad quality")
     # plt.plot(t, really_bad_qual, 'ro', label="really bad quality")
-    plt.plot(t, good_qual, 'go', label="Best Quality Full Inversion")
-    plt.plot(t, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
-    plt.plot(t, bad_qual, 'o', color='orange', label="Magnitude Inversion ( number of obs >= 7)")
-    plt.plot(t, really_bad_qual, 'ro', label="Magnitude Inversion (number of obs 2>= X < 7)")
+    plt.plot(t, good_qual, 'go', label="Best Quality Full Inversion\nweight: %3.2f"%qual_weights_array[0])
+    plt.plot(t, okay_qual, 'yo', label="Good Quality Full Inversion\n(also non clear sky obs)\nweight: %3.2f"%qual_weights_array[1])
+    plt.plot(t, bad_qual, 'o', color='orange', label="Magnitude Inversion\n( number of obs >= 7)\nweight: %3.2f"%qual_weights_array[2])
+    plt.plot(t, really_bad_qual, 'ro', label="Magnitude Inversion\n(number of obs 2>= X < 7)\nweight: %3.2f"%qual_weights_array[3])
     plt.plot(t, nan_qual, 'ko', label="NaN value")
 
     plt.xlim(t[0], t[-1])
-    plt.ylabel("Intensity [%]")
+    plt.ylabel("Reflexion")
     plt.xlabel("Date")
     plt.xticks(rotation=45)
     axs.set_xticks(t)
     axs.set_xticklabels(shp_date_info["plot_dates"]["dates"])
     plt.title("Comparison reflectance values for %s: %s"%(band, desc_of_shp))
-    plt.legend()
-    plt.show()
+    plt.legend(bbox_to_anchor=(1,1), loc="upper left")
+    plt.subplots_adjust(left=0.11, right=0.695, top=0.94, bottom=0.145)
+    plt.savefig(figure_file_path)
+    #plt.show()
 
     print("Finished Plot Raw Interp Fitted Data")
 
