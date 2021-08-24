@@ -258,7 +258,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
             y_limits = [0, 10000]
 
         ax.set_ylim(y_limits)
-        plt.legend()
+        plt.legend(loc ="upper right")
         plt.show()
         del fig, ax
 
@@ -354,8 +354,8 @@ def main():
 
     #used_fit_info_dict = fit_info_all
     #used_fit_info_dict = fit_info_fft
-    #used_fit_info_dict = fit_info_poly
-    used_fit_info_dict = fit_info_best
+    used_fit_info_dict = fit_info_poly
+    #used_fit_info_dict = fit_info_best
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
     print("after: ", shp_info)

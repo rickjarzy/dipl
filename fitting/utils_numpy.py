@@ -81,7 +81,8 @@ def add_shp_koords_to_shp_info(shp_info, master_raster_info, data_block):
     return shp_info
 
 def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data_array, 
-                                qual_weights_array, desc_of_shp, band, shp_date_info, figure_path, figure_filename_post_fix):
+                                qual_weights_array, desc_of_shp, band, shp_date_info, figure_path, 
+                                figure_filename_post_fix, fitted_raster_band_name):
 
 
     # font = {'family' : 'normal',
@@ -96,13 +97,19 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     print("fit: ", fitted_array)
     print("qual: ", qual_data_array)
     print("date: ", shp_date_info)
+    print(fitted_raster_band_name)
+
+    fit_year = fitted_raster_band_name.split(".")[1][1:5]
+    fit_doy = fitted_raster_band_name.split(".")[1][5:]
     figure_file_name_desc = desc_of_shp.replace("-", "_")
     figure_file_name_weights = r"_%1.0f_%3.2f_%3.2f_%3.2f"%(qual_weights_array[0],qual_weights_array[1],qual_weights_array[2],qual_weights_array[3])
     
-    figure_file_name = figure_filename_post_fix + band.replace(" ", "_") + "_" + figure_file_name_desc + figure_file_name_weights.replace(".", "") +".png"
+    figure_file_name = figure_filename_post_fix + fit_year + fit_doy + "_" +band.replace(" ", "_") + "_" + figure_file_name_desc + figure_file_name_weights.replace(".", "") +".png"
     figure_file_path = os.path.join(figure_path, figure_file_name)
-
-    qual_factor = 100
+    if band == "band 1":
+        qual_factor = 10
+    else:
+        qual_factor = 100
     n = raw_array.shape[0]
     t = numpy.arange(0, n, 1)
     print("here")
@@ -142,7 +149,7 @@ def plot_raw_interp_fitted_data(raw_array, interp_array, fitted_array, qual_data
     plt.legend(bbox_to_anchor=(1,1), loc="upper left")
     plt.subplots_adjust(left=0.11, right=0.695, top=0.94, bottom=0.145)
     plt.savefig(figure_file_path)
-    #plt.show()
+    
 
     print("Finished Plot Raw Interp Fitted Data")
 
