@@ -71,7 +71,8 @@ if __name__ == "__main__":
         weights = [1, 0.01, 0.01, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
-        calc_from_to = [300, 400]
+        #calc_from_to = [300, 400]
+        calc_from_to = [0, 3015]       # for fitting ends with 2008001
 
         master_raster_info = get_master_raster_info(in_dir_tf, tile, "MCD43A4")
 
@@ -108,6 +109,9 @@ if __name__ == "__main__":
 
 
                             data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
+                            
+                            # store the original data so it can be updated and processed the wright way in the next epoch 
+                            data_block_raw = numpy.copy(data_block)
 
                             qual_block = additional_stat_info_raster_mp(qual_block, weights)
 
@@ -119,7 +123,7 @@ if __name__ == "__main__":
                             print(data_block[:,plot_indizess[0], plot_indizess[1]])
 
                             [fit, sig, delta_lv] = fitq_mp(data_block, qual_block, A, sg_window)
-                            data_block[:] = fit
+                            #data_block[:] = fit
                             del fit
 
                             # plot_raw_data(data_block[:, plot_indizess[0], plot_indizess[1]],
@@ -162,12 +166,15 @@ if __name__ == "__main__":
                             sigm = sigm ** 0            # set back to ones
                             del delta_lv
 
+                            # datablock holds the fit data at this moment so lets put back in the original raw data so it can be updated in the next epoch
+                            data_block[:] = data_block_raw
+
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
                         except Exception as BrokenFirstIteration:
                             print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
                             shm.unlink()
                             break
-
+                            
 
                     elif ts_epoch == calc_from_to[1]:
                         break
@@ -177,6 +184,9 @@ if __name__ == "__main__":
 
                             # update data and qual information
                             data_block, qual_block, fitted_raster_band_name = update_data_block_mp(data_block, qual_block, in_dir_tf, in_dir_qs, tile, list_data, list_qual, sg_window, fit_nr, ts_epoch, weights, name_weights_addition)
+                            
+                            # store the original data so it can be updated and processed the wright way in the next epoch 
+                            data_block_raw = numpy.copy(data_block)
 
                             #A, data_block, qual_block, iv, l_max, l_min = additional_stat_info_raster_numpy(data_block, qual_block, sg_window, device, half_window, center)
 
@@ -219,7 +229,11 @@ if __name__ == "__main__":
 
                             sigm = sigm ** 0  # set back to ones
                             del delta_lv
+
+                            # datablock holds the fit data at this moment so lets put back in the original raw data so it can be updated in the next epoch
+                            data_block[:] = data_block_raw
                             print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
+
                         except Exception as BrokenFurtherIteration:
                             print("### ERROR - Something went wrong in the following iterations \n  - {}".format(BrokenFurtherIteration))
                             shm.unlink()

@@ -325,7 +325,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2013
+    user_year = 2001
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
@@ -353,8 +353,8 @@ def main():
     # defined year . eg. 2005 --> 2005001 - 2005361
 
     #used_fit_info_dict = fit_info_all
-    #used_fit_info_dict = fit_info_fft
-    used_fit_info_dict = fit_info_poly
+    used_fit_info_dict = fit_info_fft
+    #used_fit_info_dict = fit_info_poly
     #used_fit_info_dict = fit_info_best
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})

@@ -80,14 +80,17 @@ if __name__ == "__main__":
         A[:, 2] = numpy.arange(1, sg_window + 1, 1)
         A[:, 2] = A[:, 2] ** 2
 
-        weights = [1, 0.5, 0.25, 0.01, 0.01]
+        #weights = [1, 0.5, 0.25, 0.01, 0.01]
         #weights = [1, 0.01, 0.01, 0.01, 0.01]
-        #weights = [1, 0.5, 0.01, 0.01, 0.01]
+        weights = [1, 0.5, 0.01, 0.01, 0.01]
         
 
         name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
         # calc_from_to = [0, 927] 
-        calc_from_to = [308, 927]       # for fitting starts with 2008001
+        #calc_from_to = [85, 927]       # for fitting starts with 2002001
+        calc_from_to = [0, 3015]       # for fitting ends with 2008001
+        #calc_from_to = [308, 927]       # for fitting starts with 2007001
+        #calc_from_to = [330, 927]       # for fitting starts with 2007121
         # calc_from_to = [354, 927]       # for fitting starts with 2008001
         # calc_from_to = [499, 545]     # for fitting starts with 2011001
         
@@ -172,30 +175,30 @@ if __name__ == "__main__":
                         print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
 
                         # END linear interpolation
-                        [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
+                        [fit, sig, delta_lv] = fitq(numpy.copy(data_block), qual_block, A, sg_window)
 
                         # Plots for thesis
-                        for shp_index in shp_info.keys():
+                        # for shp_index in shp_info.keys():
                                                         
-                            x_indizes, y_indizes = shp_info[shp_index]["mat_index"][0], shp_info[shp_index]["mat_index"][1]
-                            print("Calc x indizes: ", x_indizes)
-                            print("Calc y indizes: ", y_indizes)
+                        #     x_indizes, y_indizes = shp_info[shp_index]["mat_index"][0], shp_info[shp_index]["mat_index"][1]
+                        #     print("Calc x indizes: ", x_indizes)
+                        #     print("Calc y indizes: ", y_indizes)
 
-                            # ATTENTION - x and y indizes have to be switched due to the fact, the way the multidim data gets stored
-                            plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
-                                        data_block[:, y_indizes, x_indizes],
-                                        fit[:, y_indizes, x_indizes],
-                                        qual_block[:, y_indizes, x_indizes],
-                                        weights,
-                                        shp_info[shp_index]["desc"],
-                                        "band %d"%b,
-                                        shp_info,
-                                        figure_path, 
-                                        figure_filename_post_fix,
-                                        fitted_raster_band_name
-                                        )
+                        #     # ATTENTION - x and y indizes have to be switched due to the fact, the way the multidim data gets stored
+                        #     plot_raw_interp_fitted_data(shp_info[shp_index]["raw_data"],
+                        #                 data_block[:, y_indizes, x_indizes],
+                        #                 fit[:, y_indizes, x_indizes],
+                        #                 qual_block[:, y_indizes, x_indizes],
+                        #                 weights,
+                        #                 shp_info[shp_index]["desc"],
+                        #                 "band %d"%b,
+                        #                 shp_info,
+                        #                 figure_path, 
+                        #                 figure_filename_post_fix,
+                        #                 fitted_raster_band_name
+                        #                 )
                         
-                        break
+                        # break
                         # end plots for thesis
 
                         sigm = sigm * sig
@@ -249,7 +252,7 @@ if __name__ == "__main__":
                             print("finished interpolation in ", time.time() - start_interp_time, " [sec] ")
 
 
-                            [fit, sig, delta_lv] = fitq(data_block, qual_block, A, sg_window)
+                            [fit, sig, delta_lv] = fitq(numpy.copy(data_block), qual_block, A, sg_window)
 
 
                             sigm = sigm * sig

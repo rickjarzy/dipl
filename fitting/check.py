@@ -119,23 +119,31 @@ def calc_torch_cpu():
     x_dach = torch.matmul(ATPA, ATPL)
     print("x_dach: shape {}".format(x_dach.shape), x_dach)
 
+def is_copy(input_data):
+    
+    input_data.astype(numpy.float64)
+    input_data[input_data==32767]=numpy.nan
+    return input_data
+
 if __name__ == "__main__":
 
     start = time()
     #calc_cuda()
     #calc_numpy()
 
-    os.chdir(r"/media/paul/Daten_Diplomarbeit/MODIS_Data/v6/tiff_single/MCD43A4/h18v04")
     list_tif = sorted(glob.glob("MCD43A4.*.band_1.tif"))[39:-14]
     sg_window = 46
-    print("len list: ", len(list_tif))
-    for ts in range(0,len(list_tif), sg_window):
-        print(ts)
-        print("data\n")
-        print("len of year: ", len(list_tif[ts:ts+sg_window]))
-        print(list_tif[ts:ts+sg_window])
+    data_block = numpy.round(numpy.random.rand(15,2400,2400)*1000).astype(numpy.float64)
+    print(data_block[:,1,1])
+    data_block[data_block>750]=32767
+    print(data_block[:,1,1])
 
-    print("time elapsed: ", time()-start, " [sec]")
+
+    return_data = is_copy(numpy.copy(data_block))
+
+    print("danach")
+    print(data_block[:,1,1])
+    print(return_data[:,1,1])
     print("Programm ENDE")
 
 

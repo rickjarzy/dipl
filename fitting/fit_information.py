@@ -49,6 +49,7 @@ fit_info_fft["sg_15_fft_poly"] = {"algo_desc":"calculates a FFT first and then c
 fit_info_fft["fft"] = {"algo_desc":"calculates a single FFT over an entire year - 46 epochs - recalculates the values via FFT and writes out each file of the year new", "weights":"no", "files_list":[]}
 
 fit_info_fft["dft.elements_3.1.00_0.50_0.25_0.01"] = {"algo_desc":"calculates a discrete fourier transformation over the entire year ", "weights":"yes", "files_list":[]}
+fit_info_fft["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc":"calculates a discrete fourier transformation over the entire year ", "weights":"yes", "files_list":[]}
 
 # POLY FITs Only in this dict
 # ----------------------------------------------------------------------------------------------------------------------
