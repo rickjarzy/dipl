@@ -69,6 +69,7 @@ if __name__ == "__main__":
         A[:, 2] = A[:, 2] ** 2
 
         weights = [1, 0.01, 0.01, 0.01]
+        #weights = [1, 0.5, 0.25, 0.01]
 
         name_weights_addition = ".poly_lin_win%s.weights.{}_{}_{}_{}.tif".format(weights[0], weights[1], weights[2], weights[3])
         #calc_from_to = [300, 400]
@@ -108,7 +109,9 @@ if __name__ == "__main__":
                             # ============================================================
 
 
-                            data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, b, in_dir_qs, in_dir_tf, tile, list_qual, list_data, num_of_buf_bytes, master_raster_info, fit_nr, name_weights_addition)
+                            data_block, qual_block, fitted_raster_band_name, shm = init_data_block_mp(sg_window, ts_epoch, b, in_dir_qs, in_dir_tf, tile, 
+                                                                                                      list_qual, list_data, num_of_buf_bytes, 
+                                                                                                      master_raster_info, fit_nr, name_weights_addition)
                             
                             # store the original data so it can be updated and processed the wright way in the next epoch 
                             data_block_raw = numpy.copy(data_block)
