@@ -60,6 +60,9 @@ fit_info_fft["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc":"calculates a 
 fit_info_poly["lin_poly_win15.weights.1_0.5_0.01_0.01_q0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
                                                                              "updateing the weights", "weights":"yes", "files_list":[]}
 
+fit_info_poly["lin_poly_win15.weights.1_0.5_0.25_0.01_q0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
+                                                                             "updateing the weights", "weights":"yes", "files_list":[]}
+
 fit_info_poly["poly_15.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
 fit_info_poly["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"
                                                                 "on the pixels that had NaN values or less then a specific inversion number", "files_list":[]}

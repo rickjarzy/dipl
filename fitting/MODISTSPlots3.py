@@ -217,7 +217,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
-        ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band))
+        ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band.split("_")[1]))
         # iterate through the fit products and create for each shape id a plot and show it
 
         best_qual = numpy.array(input_dict[shape_id]["quality_%d"%shape_id])
@@ -353,8 +353,8 @@ def main():
     # defined year . eg. 2005 --> 2005001 - 2005361
 
     #used_fit_info_dict = fit_info_all
-    used_fit_info_dict = fit_info_fft
-    #used_fit_info_dict = fit_info_poly
+    #used_fit_info_dict = fit_info_fft
+    used_fit_info_dict = fit_info_poly
     #used_fit_info_dict = fit_info_best
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
