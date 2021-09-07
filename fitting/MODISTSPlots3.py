@@ -37,6 +37,18 @@ from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
 from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
 from create_date_for_plots import get_dates_from_doy
+from dataclasses import dataclass
+
+@dataclass
+class PlotDirInstance():
+    figure_path : str
+    figure_filename_post_fix : str
+    figure_file_name_desc: str
+    fitted_raster_band_name : str
+    fit_year : str
+    fit_doy : str
+    band : str
+    extension: str
 
 
 def convert_koords_to_indizes(coords, master_raster_info):
@@ -217,6 +229,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
+        plt.rcParams["figure.figsize"] = (12, 9)
         ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band.split("_")[1]))
         # iterate through the fit products and create for each shape id a plot and show it
 
@@ -251,6 +264,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         ax.set_xticks(list(range(0,46,1)))
         #ax.set_xticklabels([str(i) for i in range(1,365,8)])
         ax.set_xticklabels(input_shp_date_info_dict["plot_dates"]["dates"], rotation=45)
+        
 
         if input_band == "band_1":
             y_limits = [0, 5000]
@@ -259,6 +273,8 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
 
         ax.set_ylim(y_limits)
         plt.legend(loc ="upper right")
+        plt.legend(bbox_to_anchor=(1,1), loc="upper left")
+        plt.subplots_adjust(left=0.045, right=0.780, top=0.94, bottom=0.145)
         plt.show()
         del fig, ax
 
@@ -297,6 +313,8 @@ def main():
         in_dir_tf =   r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
         shp_dir =     r"E:\MODIS_Data\shp\checkFitPlots"
+        figure_path = r"E:\Diplomarbeit\Schriftlich\Diplomarbeit\LatexFiles\Versuch2\Versuch1\Grafiken\Fitting\Fitting_method_comparison"
+        figure_filename_post_fix = r"comparison_reflectance_values_for_"
 
     tile = "h18v04"
 
@@ -325,7 +343,7 @@ def main():
 
     user_band = "band_2"
 
-    user_year = 2001
+    user_year = 2002
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
@@ -354,8 +372,8 @@ def main():
 
     #used_fit_info_dict = fit_info_all
     #used_fit_info_dict = fit_info_fft
-    used_fit_info_dict = fit_info_poly
-    #used_fit_info_dict = fit_info_best
+    #used_fit_info_dict = fit_info_poly
+    used_fit_info_dict = fit_info_best
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
     print("after: ", shp_info)
