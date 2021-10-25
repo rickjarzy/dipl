@@ -4,6 +4,36 @@ import os
 import glob
 from time import time
 
+
+def calc_ausgleich():
+
+    # hier werden die parameter eines polynom zweiten grades ermittelt
+    # f(t) = a0 + a1*t + a2*t^2
+    # das stimmt auch in der A matrix
+
+    A = numpy.array(([1,1,1], [1,2,4],[1,3,9]))
+    P = numpy.eye(3)
+    l = numpy.random.rand(3,1)
+
+    print(A)
+    print(P)
+    print(l)
+
+    ATPA = numpy.dot(numpy.dot(A.T,P),A)
+    print("ATPA. ", ATPA)
+
+    ATPL = numpy.dot(numpy.dot(A.T,P), l)
+    print("ATPL: ", ATPL)
+
+    x_dach = numpy.dot(ATPA, ATPL)
+    print("x_dach: ", x_dach)
+
+    l_dach = numpy.dot(A, x_dach)
+    print("l_dach: ", l_dach)
+
+    
+
+
 def calc_numpy():
     qual_block = numpy.ones([2400**2,3,1])
 
@@ -131,19 +161,23 @@ if __name__ == "__main__":
     #calc_cuda()
     #calc_numpy()
 
-    list_tif = sorted(glob.glob("MCD43A4.*.band_1.tif"))[39:-14]
-    sg_window = 46
-    data_block = numpy.round(numpy.random.rand(15,2400,2400)*1000).astype(numpy.float64)
-    print(data_block[:,1,1])
-    data_block[data_block>750]=32767
-    print(data_block[:,1,1])
+    # list_tif = sorted(glob.glob("MCD43A4.*.band_1.tif"))[39:-14]
+    # sg_window = 46
+    # data_block = numpy.round(numpy.random.rand(15,2400,2400)*1000).astype(numpy.float64)
+    # print(data_block[:,1,1])
+    # data_block[data_block>750]=32767
+    # print(data_block[:,1,1])
 
 
-    return_data = is_copy(numpy.copy(data_block))
+    # return_data = is_copy(numpy.copy(data_block))
 
-    print("danach")
-    print(data_block[:,1,1])
-    print(return_data[:,1,1])
+    # print("danach")
+    # print(data_block[:,1,1])
+    # print(return_data[:,1,1])
+
+
+    calc_ausgleich()
+
     print("Programm ENDE")
 
 

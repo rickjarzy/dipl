@@ -50,6 +50,30 @@ class PlotDirInstance():
     band : str
     extension: str
 
+def interp_raw_data(input_raw_data, input_qual_data):
+    """This algo inertpolates linear on indizes that hold nan values
+
+    Args:
+        input_raw_data ([numpy array]): [raw data array, that holds NaN Values]
+        input_qual_data ([numpy array]): [description]
+
+    Returns:
+        [numpy array]: [interpolated data array]
+    """
+
+
+    data_to_interp = numpy.copy(input_raw_data)
+    data_to_interp = numpy.where(data_to_interp == 32767, numpy.nan, data_to_interp )
+    print("\ninput_raw_data: ", input_raw_data)
+    print("nan data: ", data_to_interp)
+    data_mat_v_nan = numpy.isfinite(data_to_interp)
+    data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
+    data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_to_interp[data_mat_v_nan]))
+    data_to_interp = data_mat_v_interp
+
+    print("Data inpert: ", data_to_interp)
+    return data_to_interp
+    
 
 def convert_koords_to_indizes(coords, master_raster_info):
 
@@ -252,6 +276,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
             ax.plot(x_axe_data,data_array, label=fit_product)
         print("raw_data: ", input_dict[shape_id]["raw_data_%d"%shape_id])
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
+        ax.plot(x_axe_data, input_dict[shape_id]["raw_data_interp_%d"%shape_id], color='k', LineWidth=1, linestyle='--', label='linear interpolated raw data')
         ax.plot(x_axe_data, good_qual, 'go', label="Best Quality Full Inversion")
         ax.plot(x_axe_data, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
         ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Magnitude Inversion ( number of obs >= 7)")
@@ -424,13 +449,22 @@ def main():
 
         shp_info[shp_index].update({"year": user_year})
 
-        shp_info[shp_index].update({"raw_data_%d"%shp_index: read_out_modis_values(raw_data_list[ts_raw_base_index:ts_raw_end_index],
+        raw_data = read_out_modis_values(raw_data_list[ts_raw_base_index:ts_raw_end_index],
                                                    koords_to_process,
-                                                   root_dir=os.path.join(in_dir_tf, tile))})
+                                                   root_dir=os.path.join(in_dir_tf, tile))
 
-        shp_info[shp_index].update({"quality_%d"%shp_index: read_out_modis_values(qual_data_list[ts_raw_base_index:ts_raw_end_index],
+
+        qual_data = read_out_modis_values(qual_data_list[ts_raw_base_index:ts_raw_end_index],
                                                    koords_to_process,
-                                                   root_dir=os.path.join(in_dir_qs, tile))})
+                                                   root_dir=os.path.join(in_dir_qs, tile))
+
+        raw_data_interp = interp_raw_data(raw_data, qual_data)
+
+        shp_info[shp_index].update({"raw_data_%d"%shp_index: raw_data})
+
+        shp_info[shp_index].update({"raw_data_interp_%d"%shp_index: raw_data_interp})
+
+        shp_info[shp_index].update({"quality_%d"%shp_index: qual_data})
 
         for fit_product in shp_info[shp_index]["fit_products"].keys():
 
