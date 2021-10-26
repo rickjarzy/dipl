@@ -35,7 +35,7 @@ import copy
 
 from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
-from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors
+from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors, fit_info_best_poly
 from create_date_for_plots import get_dates_from_doy
 from dataclasses import dataclass
 
@@ -250,11 +250,15 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         print("ID Desc : ", input_dict[shape_id].keys())
 
         location_desc = input_dict[shape_id]["desc"]
+        fitting_method = input_dict[shape_id]["desc"]
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
         plt.rcParams["figure.figsize"] = (12, 9)
-        ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band.split("_")[1]))
+
+
+
+        
         # iterate through the fit products and create for each shape id a plot and show it
 
         best_qual = numpy.array(input_dict[shape_id]["quality_%d"%shape_id])
@@ -267,13 +271,22 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         fill_value = numpy.where(best_qual == 4, 0.1, numpy.nan) * qual_factor
         nan_values = numpy.where(best_qual == 255,  0, numpy.nan)
 
+
+
         for fit_product in input_dict[shape_id]["fit_products"].keys():
+
 
             print("processing fit product: ", fit_product)
 
             data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data_%d"%shape_id]
             print("data: ", data_array)
             ax.plot(x_axe_data,data_array, label=fit_product)
+
+
+        ax.set_title("Result Comparison Different Weights %s - %s - Year %d - Band %s" % (input_dict[shape_id]["fit_products"][fit_product]["fit_method_name"], location_desc, input_year, input_band.split("_")[1]))
+        
+        #ax.set_title("Fitting Method Comparison - %s - Year %d - Band %s" % (location_desc, input_year, input_band.split("_")[1]))
+
         print("raw_data: ", input_dict[shape_id]["raw_data_%d"%shape_id])
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_interp_%d"%shape_id], color='k', LineWidth=1, linestyle='--', label='linear interpolated raw data')
@@ -398,7 +411,9 @@ def main():
     #used_fit_info_dict = fit_info_all
     #used_fit_info_dict = fit_info_fft
     #used_fit_info_dict = fit_info_poly
-    used_fit_info_dict = fit_info_best
+    #used_fit_info_dict = fit_info_best
+    used_fit_info_dict = fit_info_best_poly
+
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
     print("after: ", shp_info)
