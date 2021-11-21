@@ -60,16 +60,16 @@ fit_info_fft["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc":"calculates a 
 #                                                                              "updateing the weights", "weights":"yes", "files_list":[]}
 
 fit_info_poly["lin_poly_win15.weights.1_0.5_0.01_0.01_q0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
-                                                                             "updateing the weights", "weights":"yes", "files_list":[]}
+                                                                             "updateing the weights", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
 
 fit_info_poly["lin_poly_win15.weights.1_0.5_0.25_0.01_q0.01"] = {"algo_desc": "calculates first a linear regresion on all NaN Pixels and then perfomrs twice a Poly Fit with "
-                                                                             "updateing the weights", "weights":"yes", "files_list":[]}
+                                                                             "updateing the weights", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
 
-fit_info_poly["poly_15.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
+fit_info_poly["poly_15.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
 fit_info_poly["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation"
-                                                                "on the pixels that had NaN values or less then a specific inversion number", "files_list":[]}
-fit_info_poly["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[]}
-fit_info_poly["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[]}
+                                                                "on the pixels that had NaN values or less then a specific inversion number", "files_list":[], "fit_method_name":"Polynomial Fit"}
+fit_info_poly["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
+fit_info_poly["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
 
 # BEST FITS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -83,16 +83,16 @@ fit_info_best["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calcul
 
 # PLots for Poly
 # ----------------------------------------------------------------------------------------------------------------------
-fit_info_best_poly["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
-fit_info_best_poly["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
-fit_info_best_poly["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit"}
+fit_info_best_poly["poly_lin_win15.weights.1_0.5_0.25_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and no lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit", "label":"poly fit - 1_0.5_0.25_0.01"}
+fit_info_best_poly["poly_lin_win15.weights.1_0.5_0.01_0.01"] = {"algo_desc":"calculates a double poly fit with a SG window first and then a lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit","label":"poly fit - 1_0.5_0.01_0.01"}
+fit_info_best_poly["poly_lin_win15.weights.1_0.01_0.01_0.01"] = {"algo_desc": "calculates a poly fit with a SG window of 15 and a lin interpolation", "weights":"yes", "files_list":[], "fit_method_name":"Polynomial Fit", "label":"poly fit - 1_0.01_0.01_0.01"}
 
 
 # PLots for Poly
 # ----------------------------------------------------------------------------------------------------------------------
-fit_info_best_fou["fft"] = {"algo_desc":"calculates a single FFT over an entire year - 46 epochs - recalculates the values via FFT and writes out each file of the year new", "weights":"no", "files_list":[], "fit_method_name":"Harmonic Oscillation"}
-fit_info_best_fou["dft.elements_3.1.00_0.50_0.25_0.01"] = {"algo_desc": "calculate discrete fourier transform with three elements for entire year", "weights":"yes", "files_list":[], "fit_method_name":"Harmonic Oscillation"}
-fit_info_best_fou["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc": "calculate discrete fourier transform with three elements for entire year", "weights":"yes", "files_list":[], "fit_method_name":"Harmonic Oscillation"}
+fit_info_best_fou["fft"] = {"algo_desc":"calculates a single FFT over an entire year - 46 epochs - recalculates the values via FFT and writes out each file of the year new", "weights":"no", "files_list":[], "fit_method_name":"Harmonic Oscillation", "label":"FFT"}
+fit_info_best_fou["dft.elements_3.1.00_0.50_0.25_0.01"] = {"algo_desc": "calculate discrete fourier transform with three elements for entire year", "weights":"yes", "files_list":[], "fit_method_name":"Harmonic Oscillation", "label":"DFT fit- 1_0.5_0.25_0.01"}
+fit_info_best_fou["dft.elements_3.1.00_0.01_0.01_0.01"] = {"algo_desc": "calculate discrete fourier transform with three elements for entire year", "weights":"yes", "files_list":[], "fit_method_name":"Harmonic Oscillation", "label":"DFT fit - 1_0.01_0.01_0.01"}
 
 
 # create the factor for the list index calculation in the main programm of the MODISPlots3.py

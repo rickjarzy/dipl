@@ -35,7 +35,7 @@ import copy
 
 from osgeo import gdal, ogr
 from matplotlib import pyplot as plt
-from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors, fit_info_best_poly
+from fit_information import fit_info_all, fit_info_poly, fit_info_fft, fit_info_best, doy_factors, fit_info_best_poly, fit_info_best_fou
 from create_date_for_plots import get_dates_from_doy
 from dataclasses import dataclass
 
@@ -236,7 +236,7 @@ def read_out_shp_koord(shp_path):
     return return_dict
 
 
-def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_year):
+def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_year, fig_path, plotting_theme):
 
     x_axe_data = numpy.array(range(0,46,1))
 
@@ -254,7 +254,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         print("Fit Products: ", input_dict[shape_id]["fit_products"].keys())
 
         fig, ax = plt.subplots()
-        plt.rcParams["figure.figsize"] = (12, 9)
+        plt.rcParams["figure.figsize"] = (15, 9)
 
 
 
@@ -280,7 +280,7 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
 
             data_array = input_dict[shape_id]["fit_products"][fit_product]["fit_data_%d"%shape_id]
             print("data: ", data_array)
-            ax.plot(x_axe_data,data_array, label=fit_product)
+            ax.plot(x_axe_data,data_array, label=input_dict[shape_id]["fit_products"][fit_product]["label"])
 
 
         ax.set_title("Result Comparison Different Weights %s - %s - Year %d - Band %s" % (input_dict[shape_id]["fit_products"][fit_product]["fit_method_name"], location_desc, input_year, input_band.split("_")[1]))
@@ -290,10 +290,10 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         print("raw_data: ", input_dict[shape_id]["raw_data_%d"%shape_id])
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_%d"%shape_id], color='c', LineWidth=0, marker="*",markersize=15, label="raw data")
         ax.plot(x_axe_data, input_dict[shape_id]["raw_data_interp_%d"%shape_id], color='k', LineWidth=1, linestyle='--', label='linear interpolated raw data')
-        ax.plot(x_axe_data, good_qual, 'go', label="Best Quality Full Inversion")
-        ax.plot(x_axe_data, okay_qual, 'yo', label="Good Quality Full Inversion (also non clear sky obs)")
-        ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Magnitude Inversion ( number of obs >= 7)")
-        ax.plot(x_axe_data, really_bad_qual, 'ro', label="Magnitude Inversion (number of obs 2>= X < 7)")
+        ax.plot(x_axe_data, good_qual, 'go', label="Best Quality")
+        ax.plot(x_axe_data, okay_qual, 'yo', label="Good Quality ")
+        ax.plot(x_axe_data, bad_qual, 'o', color='orange', label="Magnitude Inversion obs >= 7")
+        ax.plot(x_axe_data, really_bad_qual, 'ro', label="Magnitude Inversion obs 2>= X < 7")
         ax.plot(x_axe_data, fill_value, 'bo', label="Fill Value")
         ax.plot(x_axe_data, nan_values, 'ko', label="NaN Values")
 
@@ -303,17 +303,18 @@ def plot_ts_with_shape(input_dict, input_shp_date_info_dict, input_band, input_y
         #ax.set_xticklabels([str(i) for i in range(1,365,8)])
         ax.set_xticklabels(input_shp_date_info_dict["plot_dates"]["dates"], rotation=45)
         
-
         if input_band == "band_1":
             y_limits = [0, 5000]
         elif input_band == "band_2":
-            y_limits = [0, 10000]
+            y_limits = [0, 6000]
 
         ax.set_ylim(y_limits)
         plt.legend(loc ="upper right")
         plt.legend(bbox_to_anchor=(1,1), loc="upper left")
-        plt.subplots_adjust(left=0.045, right=0.780, top=0.94, bottom=0.145)
-        plt.show()
+        plt.subplots_adjust(left=0.059, right=0.715, top=0.96, bottom=0.123)
+        #plt.show()
+
+        plt.savefig(os.path.join(fig_path, plotting_theme +"_" + location_desc+ "_%d"%input_year), dpi=150)
         del fig, ax
 
 
@@ -346,6 +347,7 @@ def main():
         in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
         shp_dir     = r"E:\MODIS_Data\shp\checkFitPlots"
+        figure_path = r"E:\Diplomarbeit\Schriftlich\Diplomarbeit\LatexFiles\Versuch2\Versuch1\Grafiken\Fitting\Fitting_method_comparison\selected_comparisons_poly"
     else:
         in_dir_qs =   r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf =   r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
@@ -412,7 +414,8 @@ def main():
     #used_fit_info_dict = fit_info_fft
     #used_fit_info_dict = fit_info_poly
     #used_fit_info_dict = fit_info_best
-    used_fit_info_dict = fit_info_best_poly
+    used_fit_info_dict = fit_info_best_fou
+    #used_fit_info_dict = fit_info_best_poly
 
     print("SHP_INFO: ", shp_info)
     shp_date_info = get_dates_from_doy(raw_data_list[ts_raw_base_index:ts_raw_end_index], {})
@@ -509,7 +512,9 @@ def main():
             print("data: ", shp_info[ind]["fit_products"][indi]["fit_data_%d"%ind])
 
     # create a plot for the raster data TS
-    plot_ts_with_shape(shp_info, shp_date_info, user_band, user_year)
+
+    plotting_theme = "Fit_comparison_fft_all"
+    plot_ts_with_shape(shp_info, shp_date_info, user_band, user_year, figure_path, plotting_theme)
 
 
 
