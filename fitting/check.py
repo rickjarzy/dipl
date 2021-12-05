@@ -155,6 +155,66 @@ def is_copy(input_data):
     input_data[input_data==32767]=numpy.nan
     return input_data
 
+def replace_nan_with_lin(input_raw, input_lin):
+
+
+    # STEP 1 - LIN Interpolation for raw data: 
+    # ===================================================================================
+
+    # reshape data from buffer to 2d matrix with the time as y coords and x as the values
+    data_mat = input_raw.reshape(input_raw.shape[0], input_raw.shape[1]*input_raw.shape[2])
+    print(data_mat.shape)
+
+
+    # strore orig time, cols and row information - needed for reshaping
+    orig_time = input_raw.shape[0]
+    orig_rows = input_raw.shape[1]
+    orig_cols = input_raw.shape[2]
+
+
+
+    print("replaced: ", data_mat)
+    print("\ninput_fit: ", input_raw)
+    print("\ninput_lin: ", input_lin)
+
+    data_mat = numpy.where(data_mat == 32767, numpy.nan, data_mat)
+    n = data_mat.shape[0]
+    # iter through
+    for i in range(0, data_mat.shape[1], 1):
+
+        data_mat_v_nan = numpy.isfinite(data_mat[:, i])
+        data_mat_v_t = numpy.arange(0, len(data_mat_v_nan), 1)
+
+        if False in data_mat_v_nan:
+            try:
+
+                data_mat_v_interp = numpy.round(numpy.interp(data_mat_v_t, data_mat_v_t[data_mat_v_nan], data_mat[:,i][data_mat_v_nan]))
+
+
+                if i == 0:
+                    print("i == 0")
+                    print("data mat: ", data_mat[:, i])
+                    print("data_mat_v_interp", data_mat_v_interp)
+
+                    # print("data mat:", data_mat[:, i])
+                    # print("data_mat.dtype: ", data_mat.dtype)
+                    # print("data_mat_interp.dtype: ", data_mat_v_interp.dtype)
+                    data_mat_v_interp = numpy.round(data_mat_v_interp).astype(numpy.int16)
+                    # print("\ntransfrom to int16: ", data_mat_v_interp)
+                    # print("\ndata_mat_interp.dtype: ", data_mat_v_interp.dtype)
+                    data_mat[:, i] = data_mat_v_interp
+                    continue
+
+                data_mat[:, i] = data_mat_v_interp
+            except:
+                continue
+
+        else:
+            pass
+    input_lin[:] = numpy.round(data_mat.reshape(orig_time, orig_rows, orig_cols)).astype(numpy.int16)
+    return lin_data
+
+
 if __name__ == "__main__":
 
     start = time()
@@ -176,7 +236,30 @@ if __name__ == "__main__":
     # print(return_data[:,1,1])
 
 
-    calc_ausgleich()
+    #calc_ausgleich()
+
+    raw_data = numpy.random.rand(4,4,4)*100
+    raw_data[raw_data>70]=32767
+    raw_data = numpy.round(raw_data).astype(numpy.int16)
+    print(raw_data[2,:,:])
+
+    lin_data = numpy.zeros((4,4,4)).astype(numpy.int16)
+    lin_data = replace_nan_with_lin(raw_data, lin_data)
+
+    fit_data = numpy.copy(raw_data)
+    fit_data[fit_data<=50]=30
+    print("raw data")
+    print(raw_data[2,:,:])
+    print("fit data")
+    print(fit_data[2,:,:])
+    print("lin data")
+    print(lin_data[2,:,:])
+    print("replaced data")
+    replaced_data = numpy.where(fit_data[2,:,:]>9999, lin_data[2,:,:], fit_data[2,:,:])
+    print(replaced_data)
+    print("nan to num")
+    print(numpy.nan_to_num(numpy.where(raw_data[2,:,:]>9999, numpy.nan, raw_data[2,:,:])))
+
 
     print("Programm ENDE")
 

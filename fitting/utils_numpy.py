@@ -770,13 +770,36 @@ def fitq_numpy(lv, pv, A, sq_window):
     print("")
     return None, None, None
 
-def fit_fft(lv, pv, sq_window):
+def replace_nan_with_lin_interpols(input_fit, input_lin):
 
-    print("Starting FFT")
+    """[Replacing all nan values in the fitted index with the result of the linear interplation]
+            input_fit - dtype = float.64
+            input_lin - dtpye = int16
+        [[32767    70    47     1]
+        [32767 32767    42 32767]
+        [32767 32767     6     5]
+        [    5    58 32767    22]]
+        fit data
+        [[nan    70    30    30]
+        [nan nan    30 nan]
+        [nan nan    30    30]
+        [   30    58 nan    30]]
+        lin data
+        [[46 70 47  1]
+        [10 45 42 27]
+        [32 22  6  5]
+        [ 5 58 56 22]]
+        replaced data
+        [[46 70 30 30]
+        [10 45 30 27]
+        [32 22 30 30]
+        [30 58 56 30]]
 
+    Returns:
+        [numpy array]: [holds the linear interpolation instead of the fitted data]
+    """
 
-
-    return None
+    return numpy.where(numpy.nan_to_num(input_fit)<1, input_lin, input_fit)
 
 if __name__ == "__main__":
     print("Utils Numpy")

@@ -9,7 +9,7 @@ import glob
 import fit_config
 
 from utils_numpy import (fitq, write_fitted_raster_to_disk, plot_raw_data, plot_raw_interp_fitted_data, 
-                        add_shp_koords_to_shp_info)
+                        add_shp_koords_to_shp_info, replace_nan_with_lin_interpols)
 from utils_mp import (init_data_block_mp, additional_stat_info_raster_mp,update_data_block_mp, multi_linear_interpolation,
                       get_master_raster_info)
 
@@ -85,10 +85,10 @@ if __name__ == "__main__":
         #weights = [1, 0.5, 0.01, 0.01, 0.01]
         
 
-        name_weights_addition = ".lin_poly_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
+        name_weights_addition = ".lin_poly_lin_win%s.weights.{}_{}_{}_{}_q{}.tif".format(weights[0], weights[1], weights[2], weights[3], weights[4])
         # calc_from_to = [0, 927] 
         #calc_from_to = [85, 927]       # for fitting starts with 2002001
-        calc_from_to = [0, 927]       # for fitting ends with 2020
+        calc_from_to = [0, 308]       # for fitting ends with 2002
         #calc_from_to = [308, 927]       # for fitting starts with 2007001
         #calc_from_to = [330, 927]       # for fitting starts with 2007121
         # calc_from_to = [354, 927]       # for fitting starts with 2008001
@@ -206,12 +206,28 @@ if __name__ == "__main__":
 
                         [fit, sig, delta_lv] = fitq(fit, qual_block_nu, A, sg_window)
 
+
                         # write output raster
-                        write_fitted_raster_to_disk(fit[fit_nr], out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+
+                        # print("FITTED: ", fit[fit_nr][:15, :15])
+                        # print("NANNUM: ", numpy.nan_to_num((fit[fit_nr][:15, :15])))
+                        # print("LIN: ", data_block[fit_nr][:15, :15])
+                        # print("Replace: ", numpy.where(numpy.nan_to_num(fit[fit_nr][:15, :15])<1, data_block[fit_nr][:15, :15], fit[fit_nr][:15, :15]))
+
+
+                        write_fitted_raster_to_disk(replace_nan_with_lin_interpols(fit[fit_nr], data_block[fit_nr]),
+                                                    out_dir_fit, 
+                                                    tile, 
+                                                    fitted_raster_band_name, 
+                                                    master_raster_info)
 
                         sigm = sigm ** 0            # set back to ones
                         del delta_lv, fit
                         print("- FINISHED Fit after ", time.time() - epoch_start, " [sec]\n")
+
+
+                        
+
                         # except Exception as BrokenFirstIteration:
                         #     print("### ERROR - Something went wrong in the first iteration \n  - {}".format(BrokenFirstIteration))
                         #     break
@@ -264,7 +280,11 @@ if __name__ == "__main__":
                             fit_layer = fit[fit_nr]
 
                             # write output raster
-                            write_fitted_raster_to_disk(fit_layer, out_dir_fit, tile, fitted_raster_band_name, master_raster_info)
+                            write_fitted_raster_to_disk(replace_nan_with_lin_interpols(fit[fit_nr], data_block[fit_nr]),
+                                                    out_dir_fit, 
+                                                    tile, 
+                                                    fitted_raster_band_name, 
+                                                    master_raster_info)
 
                             sigm = sigm ** 0  # set back to ones
                             del delta_lv
