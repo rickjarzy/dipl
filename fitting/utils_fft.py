@@ -424,8 +424,8 @@ def multi_fft(job_list):
 def write_fitted_raster_to_disk_fft(data_block, list_data_names, out_dir_fit, tile, master_raster_info, name_weights_addition):
 
     # set negative values to nan value of 32767
-    data_block[data_block < 0] = 32767
-    data_block[data_block > 9999] = 9999
+    data_block[data_block < 0] = 0
+    #data_block[data_block > 9999] = 9999
 
     for i in range(0, len(list_data_names), 1):
 
@@ -619,9 +619,14 @@ def perform_dft(input_info, plot=False):
 
             l_hat = numpy.dot(A, x_hat)
 
+
+            
             data_mat[:, i] = l_hat.reshape(len(l_hat))
+
+
         except:
             # print("singular matrix")
+            data_mat[:, i] = data_mat_v.reshape(len(data_mat_v))
             sing_cou += 1
             # for e in range(0, len(data_mat_v), 1):
             #     print("data: ", data_mat_v[e], " - qual:", qual_mat_v[e])

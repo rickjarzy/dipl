@@ -238,27 +238,9 @@ if __name__ == "__main__":
 
     #calc_ausgleich()
 
-    raw_data = numpy.random.rand(4,4,4)*100
-    raw_data[raw_data>70]=32767
-    raw_data = numpy.round(raw_data).astype(numpy.int16)
-    print(raw_data[2,:,:])
+    with open("check.txt", "w") as file_to_wrt: 
+        file_to_wrt.write("hallo")
 
-    lin_data = numpy.zeros((4,4,4)).astype(numpy.int16)
-    lin_data = replace_nan_with_lin(raw_data, lin_data)
-
-    fit_data = numpy.copy(raw_data)
-    fit_data[fit_data<=50]=30
-    print("raw data")
-    print(raw_data[2,:,:])
-    print("fit data")
-    print(fit_data[2,:,:])
-    print("lin data")
-    print(lin_data[2,:,:])
-    print("replaced data")
-    replaced_data = numpy.where(fit_data[2,:,:]>9999, lin_data[2,:,:], fit_data[2,:,:])
-    print(replaced_data)
-    print("nan to num")
-    print(numpy.nan_to_num(numpy.where(raw_data[2,:,:]>9999, numpy.nan, raw_data[2,:,:])))
 
 
     print("Programm ENDE")

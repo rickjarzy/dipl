@@ -348,6 +348,13 @@ def main():
         out_dir_fit = r"E:\MODIS_Data\v6\fitted"
         shp_dir     = r"E:\MODIS_Data\shp\checkFitPlots"
         figure_path = r"E:\Diplomarbeit\Schriftlich\Diplomarbeit\LatexFiles\Versuch2\Versuch1\Grafiken\Fitting\Fitting_method_comparison\selected_comparisons_poly"
+
+    elif os.name == "nt" and socket.gethostname() == "TX64-01540":
+        in_dir_qs = r"D:\modis\v6\tiff_single\MCD43A2"
+        in_dir_tf = r"D:\modis\v6\tiff_single\MCD43A4"
+        out_dir_fit = r"D:\modis\v6\fitted"
+        shp_dir     = r"C:\Users\parzberg\Documents\private\dev\python\dipl\shp\checkFitPlots"
+        figure_path = r"C:\Users\parzberg\Documents\private\dev\latex\dipl\Grafiken\Fitting\Fitting_method_comparison"
     else:
         in_dir_qs =   r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
         in_dir_tf =   r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
@@ -387,14 +394,16 @@ def main():
 
     # calcute the starting point of the year defined by user_year
     ts_raw_base_index = len(doy_57) + len(doy_full) * doy_factors[user_year]["factor"]  # this is the index where the year 2001 epoch starts in the data_lists for the bands
-
+    print("Raw based index: ", ts_raw_base_index)
+    
     # calculate the end point of the year defined by the user_year
     ts_raw_end_index = ts_raw_base_index + len(doy_full)
 
     # get into raw dir and select year001
     os.chdir(os.path.join(in_dir_tf, tile))
     raw_data_list = sorted(glob.glob("*.%s.tif"%user_band))
-
+    print(os.getcwd())
+    print("Raw data list: ", len(raw_data_list))
     # get into qual dir and select year001
     os.chdir(os.path.join(in_dir_qs, tile))
     qual_data_list = sorted(glob.glob("*.%s.tif"%user_band))

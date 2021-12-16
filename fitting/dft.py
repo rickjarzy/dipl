@@ -40,6 +40,11 @@ if __name__ == "__main__":
             in_dir_qs = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A2"
             in_dir_tf = r"/home/iot/scripts/dev/projects/timeseries/data/v6/tiff_single/MCD43A4"
             out_dir_fit = r"/home/iot/scripts/dev/projects/timeseries/data/v6/fitted"
+        elif os.name == "nt" and socket.gethostname() == "TX64-01540":
+            in_dir_qs = r"D:\modis\v6\tiff_single\MCD43A2"
+            in_dir_tf = r"D:\modis\v6\tiff_single\MCD43A4"
+            out_dir_fit = r"D:\modis\v6\fitted"
+
         else:
             in_dir_qs = r"E:\MODIS_Data\v6\tiff_single\MCD43A2"
             in_dir_tf = r"E:\MODIS_Data\v6\tiff_single\MCD43A4"
@@ -65,9 +70,9 @@ if __name__ == "__main__":
 
         A = create_dft_A_mat(dft_elements, block, year)
 
-        weights = [1, 0.01, 0.01, 0.01]
+        weights = [1, 0.5, 0.25, 0.01]
 
-        name_weights_addition = ".dft.elements_%d.%3.2f_%3.2f_%3.2f_%3.2f.tif"%(dft_elements, weights[0], weights[1], weights[2], weights[3])
+        name_weights_addition = ".dft_lin.elements_%d.%3.2f_%3.2f_%3.2f_%3.2f.tif"%(dft_elements, weights[0], weights[1], weights[2], weights[3])
 
         calc_from_to = [39, -14]                #39 = 2000361 - -14 =
 
@@ -81,12 +86,13 @@ if __name__ == "__main__":
 
         for b in bands:
             os.chdir(os.path.join(in_dir_qs, tile))
+            print("wrk dir: ", os.getcwd())
             list_qual = sorted(glob.glob("MCD43A2.*.band_%d.tif" % b))[calc_from_to[0]:calc_from_to[1]]
-
+            print("len list_qual: ", )
             os.chdir(os.path.join(in_dir_tf, tile))
             list_data = sorted(glob.glob("MCD43A4.*.band_%d.tif" % b))[calc_from_to[0]:calc_from_to[1]]
             len_list_data = len(list_data)
-
+            print("len list data: ", len_list_data)
             # check if qual and sat data have the same amount of files
             if int(len(list_qual)) != int(len(list_data)):
                 print("Len list_qual: ", len(list_qual))
